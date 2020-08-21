@@ -163,40 +163,68 @@ def check_console_params(parsed_params, debug=False):
     return is_correct
 
 
+def calculate_diff_monthly_payment(params):
+    principal = params.get('principal')
+    periods = params.get('periods')
+    interest = params.get('interest')
+    average_principal = principal / periods
+    nominal_interest_rate = interest / 100. / 12.
+    payments = []
+    for month1 in range(1, periods + 1):
+        month_payment = math.ceil(average_principal * (1. + nominal_interest_rate * (periods - (month1 - 1))))
+        payments.append(month_payment)
+    for i in range(len(payments)):
+        month2 = i + 1
+        print(f'Month {month2}: paid out {payments[i]}')
+    overpayment = math.ceil(sum(payments) - principal)
+    print(f'\nOverpayment = {overpayment}')
+
+
 def process_params(args_input):
     params = cast_console_params(parse_console_params(args_input))
-    if not check_console_params(params, debug=True):
+    if not check_console_params(params, debug=False):
         print('Incorrect parameters')
         # exit(-1)
         return
-    # params = (params)
-    print(str(params))
+    if params['type'] == PAYMENT_TYPE_DIFF:
+        calculate_diff_monthly_payment(params)
     # calculate_annuity_monthly_payment()
     # calculate_annuity_count_of_months()
     # calculate_annuity_principal()
 
 
 def test_parse_params():
-    test_args = [
-        ['script.py', '--type=diff', '--principal=1000000', '--periods=10', '--interest=10', ],
-        ['script.py', '--type=diff', '--principal=1000000', '--periods=10', '--interest=10', ],
-        ['script.py', '--type=annuity', '--principal=1000000', '--periods=60', '--interest=10', ],
-        ['script.py', '--type=diff', '--principal=500000', '--periods=8', '--interest=7.8', ],
-        ['script.py', '--type=annuity', '--payment=8722', '--periods=120', '--interest=5.6', ],
-        ['script.py', '--type=annuity', '--principal=500000', '--payment=23000', '--interest=7.8', ],
-        # ] incorrect_args = [
-        ['script.py', '--incorrect_args', ],
-        ['script.py', '--principal=1000000', '--periods=60', '--interest=10', ],
-        ['script.py', '--type=diff', '--principal=1000000', '--interest=10', '--payment=100000', ],
-        ['script.py', '--type=annuity', '--principal=100000', '--payment=10400', '--periods=8', ],
-        ['script.py', '--type=annuity', '--principal=1000000', '--payment=104000', ],
-        ['script.py', '--type=diff', '--principal=30000', '--periods=-14', '--interest=10', ],
-    ]
-    for args in test_args:
+    for args in get_test_cases():
         params = check_console_params(cast_console_params(parse_console_params(args)), debug=True)
         print('Result==> ' + str(params))
 
 
-test_parse_params()
+def test_run_params():
+    for args in get_test_cases():
+        process_params(args)
+
+
+def get_test_cases():
+    script_name = __file__
+    test_args = [
+        # [script_name, '--type=diff', '--principal=1000000', '--periods=10', '--interest=10', ],
+        [script_name, '--type=diff', '--principal=1000000', '--periods=10', '--interest=10', ],
+        # [script_name, '--type=annuity', '--principal=1000000', '--periods=60', '--interest=10', ],
+        # [script_name, '--type=diff', '--principal=500000', '--periods=8', '--interest=7.8', ],
+        # [script_name, '--type=annuity', '--payment=8722', '--periods=120', '--interest=5.6', ],
+        # [script_name, '--type=annuity', '--principal=500000', '--payment=23000', '--interest=7.8', ],
+        # # ] incorrect_args = [
+        # [script_name, '--incorrect_args', ],
+        # [script_name, '--principal=1000000', '--periods=60', '--interest=10', ],
+        # [script_name, '--type=diff', '--principal=1000000', '--interest=10', '--payment=100000', ],
+        # [script_name, '--type=annuity', '--principal=100000', '--payment=10400', '--periods=8', ],
+        # [script_name, '--type=annuity', '--principal=1000000', '--payment=104000', ],
+        # [script_name, '--type=diff', '--principal=30000', '--periods=-14', '--interest=10', ],
+    ]
+    return test_args
+
+
+# test_parse_params()
+test_run_params()
 
 # process_params(sys.argv)
