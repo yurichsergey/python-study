@@ -1,3 +1,10 @@
+# Simple Chatty Bot
+# Here, at the beginning of your programmer’s path, creating a simple console
+#   chat bot will do wonders to guide you through the basics of coding. During this
+#   journey you will also play some word and number games that you are going to implement
+#   all on your own. Pack up and let’s hit the road, my friend!<br/><br/>Learn more
+#   at <a href="https://hyperskill.org">https://hyperskill.org/projects/97</a>
+
 def greet(bot_name, birth_year):
     print('Hello! My name is ' + bot_name + '.')
     print('I was created in ' + birth_year + '.')
@@ -52,7 +59,7 @@ def end():
     print('Congratulations, have a nice day!')
 
 
-greet('Aid', '2020')  # change it as you need
+greet('Flash-bot', '2020')
 remind_name()
 guess_age()
 count()

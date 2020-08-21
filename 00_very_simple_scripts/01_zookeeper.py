@@ -1,3 +1,8 @@
+# Zookeeper
+# This short code challenge can help the local zoo look after its denizens.
+#   You will create a tool for monitoring animals and their status.<br/><br/>Learn more
+#   at <a href="https://hyperskill.org">https://hyperskill.org/projects/98</a>
+
 camel = r"""
 Switching on the camera in the camel habitat...
  ___.-''''-.
