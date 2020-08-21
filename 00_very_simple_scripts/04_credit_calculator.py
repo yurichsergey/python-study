@@ -2,17 +2,14 @@ import math
 import sys
 
 PAYMENT_TYPE_DIFF = 'diff'
-
 PAYMENT_TYPE_ANNUITY = 'annuity'
 
 
-def calculate_annuity_count_of_months():
-    print('Enter the credit principal:')
-    principal = float(input())
-    print('Enter the monthly payment:')
-    monthly_annuity_payment = float(input())
-    print('Enter the credit interest:')
-    annual_interest_percent = float(input())
+def calculate_annuity_count_of_months(params):
+    principal = params.get('principal')
+    monthly_annuity_payment = params.get('payment')
+    annual_interest_percent = params.get('interest')
+
     annual_interest = annual_interest_percent / 100.
     monthly_interest = annual_interest / 12  # nominal (monthly) interest rate.
     x_pow = monthly_annuity_payment / (monthly_annuity_payment - monthly_interest * principal)
@@ -28,15 +25,14 @@ def calculate_annuity_count_of_months():
         result += f' {months} month' + ('s' if months > 1 else '')
     result += f' to repay the credit!'
     print(result)
+    overpayment = math.ceil(monthly_annuity_payment * period_in_months - principal)
+    print(f'Overpayment = {overpayment}')
 
 
-def calculate_annuity_monthly_payment():
-    print('Enter the credit principal:')
-    principal = float(input())
-    print('Enter the number of periods:')
-    period_in_months = int(input())
-    print('Enter the credit interest:')
-    annual_interest_percent = float(input())
+def calculate_annuity_monthly_payment(params):
+    principal = params.get('principal')
+    period_in_months = params.get('periods')
+    annual_interest_percent = params.get('interest')
     annual_interest = annual_interest_percent / 100.
     monthly_interest = annual_interest / 12  # nominal (monthly) interest rate.
 
@@ -49,15 +45,14 @@ def calculate_annuity_monthly_payment():
     #     result += f' with last monthly payment = {last_monthly_payment}'
     result += '!'
     print(result)
+    overpayment = math.ceil(monthly_annuity_payment * period_in_months - principal)
+    print(f'Overpayment = {overpayment}')
 
 
-def calculate_annuity_principal():
-    print('Enter the monthly payment:')
-    monthly_payment = float(input())
-    print('Enter the count of periods:')
-    period_in_months = int(input())
-    print('Enter the credit interest:')
-    annual_interest_percent = float(input())
+def calculate_annuity_principal(params):
+    monthly_payment = params.get('payment')
+    period_in_months = params.get('periods')
+    annual_interest_percent = params.get('interest')
     annual_interest = annual_interest_percent / 100.
     monthly_interest = annual_interest / 12  # nominal (monthly) interest rate.
 
@@ -67,6 +62,8 @@ def calculate_annuity_principal():
 
     result = f'Your credit principal = {principal}!'
     print(result)
+    overpayment = math.ceil(monthly_payment * period_in_months - principal)
+    print(f'Overpayment = {overpayment}')
 
 
 def parse_console_params(args_input):
@@ -80,19 +77,19 @@ def parse_console_params(args_input):
     return parsed_params
 
 
-def cast_console_params(parsed_params):
+def cast_console_params(params):
     int_params = ['periods', ]
     for int_param in int_params:
-        int_value = parsed_params.get(int_param)  # str
+        int_value = params.get(int_param)  # str
         if type(int_value) == str and is_int(int_value):
-            parsed_params[int_param] = int(int_value)
+            params[int_param] = int(int_value)
 
     float_params = ['interest', 'principal', 'payment', ]
     for float_param in float_params:
-        float_value = parsed_params.get(float_param)
+        float_value = params.get(float_param)
         if type(float_value) == str and is_float(float_value):
-            parsed_params[float_param] = float(float_value)
-    return parsed_params
+            params[float_param] = float(float_value)
+    return params
 
 
 def is_float(val):
@@ -110,15 +107,15 @@ def is_int(s):
     return s.isdigit()
 
 
-def check_console_params(parsed_params, debug=False):
+def check_console_params(params, debug=False):
     is_correct = True
-    print(str(parsed_params)) if debug else None
+    print(str(params)) if debug else None
     correct_types = [PAYMENT_TYPE_ANNUITY, PAYMENT_TYPE_DIFF, ]
-    payment_type = parsed_params.get('type')
-    principal = parsed_params.get('principal')
-    periods = parsed_params.get('periods')
-    interest = parsed_params.get('interest')
-    payment = parsed_params.get('payment')
+    payment_type = params.get('type')
+    principal = params.get('principal')
+    periods = params.get('periods')
+    interest = params.get('interest')
+    payment = params.get('payment')
 
     if payment_type not in correct_types:
         print('payment_type not in correct_types') if debug else None
@@ -188,9 +185,13 @@ def process_params(args_input):
         return
     if params['type'] == PAYMENT_TYPE_DIFF:
         calculate_diff_monthly_payment(params)
-    # calculate_annuity_monthly_payment()
-    # calculate_annuity_count_of_months()
-    # calculate_annuity_principal()
+    elif params['type'] == PAYMENT_TYPE_ANNUITY:
+        if params.get('payment') is None:
+            calculate_annuity_monthly_payment(params)
+        elif params.get('principal') is None:
+            calculate_annuity_principal(params)
+        elif params.get('periods') is None:
+            calculate_annuity_count_of_months(params)
 
 
 def test_parse_params():
@@ -207,24 +208,22 @@ def test_run_params():
 def get_test_cases():
     script_name = __file__
     test_args = [
-        # [script_name, '--type=diff', '--principal=1000000', '--periods=10', '--interest=10', ],
         [script_name, '--type=diff', '--principal=1000000', '--periods=10', '--interest=10', ],
-        # [script_name, '--type=annuity', '--principal=1000000', '--periods=60', '--interest=10', ],
-        # [script_name, '--type=diff', '--principal=500000', '--periods=8', '--interest=7.8', ],
-        # [script_name, '--type=annuity', '--payment=8722', '--periods=120', '--interest=5.6', ],
-        # [script_name, '--type=annuity', '--principal=500000', '--payment=23000', '--interest=7.8', ],
-        # # ] incorrect_args = [
-        # [script_name, '--incorrect_args', ],
-        # [script_name, '--principal=1000000', '--periods=60', '--interest=10', ],
-        # [script_name, '--type=diff', '--principal=1000000', '--interest=10', '--payment=100000', ],
-        # [script_name, '--type=annuity', '--principal=100000', '--payment=10400', '--periods=8', ],
-        # [script_name, '--type=annuity', '--principal=1000000', '--payment=104000', ],
-        # [script_name, '--type=diff', '--principal=30000', '--periods=-14', '--interest=10', ],
+        [script_name, '--type=annuity', '--principal=1000000', '--periods=60', '--interest=10', ],
+        [script_name, '--type=diff', '--principal=500000', '--periods=8', '--interest=7.8', ],
+        [script_name, '--type=annuity', '--payment=8722', '--periods=120', '--interest=5.6', ],
+        [script_name, '--type=annuity', '--principal=500000', '--payment=23000', '--interest=7.8', ],
+        # ] incorrect_args = [
+        [script_name, '--incorrect_args', ],
+        [script_name, '--principal=1000000', '--periods=60', '--interest=10', ],
+        [script_name, '--type=diff', '--principal=1000000', '--interest=10', '--payment=100000', ],
+        [script_name, '--type=annuity', '--principal=100000', '--payment=10400', '--periods=8', ],
+        [script_name, '--type=annuity', '--principal=1000000', '--payment=104000', ],
+        [script_name, '--type=diff', '--principal=30000', '--periods=-14', '--interest=10', ],
     ]
     return test_args
 
 
 # test_parse_params()
-test_run_params()
-
-# process_params(sys.argv)
+# test_run_params()
+process_params(sys.argv)
