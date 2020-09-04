@@ -126,6 +126,13 @@ def analyze_field(matrix: list):
     return summarize_variants(variants, matrix)
 
 
+def tic_tac_toe_generate_simple_map(input_cells: str):
+    # print_field_from_string(input_cells)
+    matrix = convert_to_matrix(input_cells)
+    print_field_from_matrix(matrix)
+    print(analyze_field(matrix))
+
+
 def tic_tac_toe(input_cells: str):
     # print_field_from_string(input_cells)
     matrix = convert_to_matrix(input_cells)
@@ -138,7 +145,7 @@ def main():
     tic_tac_toe(input_cells)
 
 
-def test1():
+def test_generate_simple_map_1():
     return ('TEST CASE 1', 'XXXOO__O_', '''
 ---------
 | X X X |
@@ -149,7 +156,7 @@ X wins
 ''')
 
 
-def test2():
+def test_generate_simple_map_2():
     return ('TEST CASE 2', 'XOXOXOXXO', '''
 ---------
 | X O X |
@@ -160,7 +167,7 @@ X wins
 ''')
 
 
-def test3():
+def test_generate_simple_map_3():
     return ('TEST CASE 3', 'XOOOXOXXO', '''
 ---------
 | X O O |
@@ -171,7 +178,7 @@ O wins
 ''')
 
 
-def test4():
+def test_generate_simple_map_4():
     return ('TEST CASE 4', 'XOXOOXXXO', '''
 ---------
 | X O X |
@@ -182,7 +189,7 @@ Draw
 ''')
 
 
-def test5():
+def test_generate_simple_map_5():
     return ('TEST CASE 5', 'XO_OOX_X_', '''
 ---------
 | X O   |
@@ -193,7 +200,7 @@ Game not finished
 ''')
 
 
-def test6():
+def test_generate_simple_map_6():
     return ('TEST CASE 6', 'XO_XO_XOX', '''
 ---------
 | X O _ |
@@ -204,7 +211,7 @@ Impossible
 ''')
 
 
-def test_case_runner(test_case: tuple):
+def test_case_runner_generate_simple_map(test_case: tuple):
     test_title: str
     test_string: str
     expected_string: str
@@ -217,10 +224,17 @@ def test_case_runner(test_case: tuple):
     tic_tac_toe(test_string)
 
 
-main()
-# test_case_runner(test1())
-# test_case_runner(test2())
-# test_case_runner(test3())
-# test_case_runner(test4())
-# test_case_runner(test5())
-# test_case_runner(test6())
+def main_test():
+    # tests for generate_simple_map
+    test_case_runner_generate_simple_map(test_generate_simple_map_1())
+    test_case_runner_generate_simple_map(test_generate_simple_map_2())
+    test_case_runner_generate_simple_map(test_generate_simple_map_3())
+    test_case_runner_generate_simple_map(test_generate_simple_map_4())
+    test_case_runner_generate_simple_map(test_generate_simple_map_5())
+    test_case_runner_generate_simple_map(test_generate_simple_map_6())
+
+    #
+
+
+main_test()
+# main()
