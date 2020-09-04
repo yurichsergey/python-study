@@ -42,11 +42,11 @@ def count_hits(matrix: list, hit: str) -> int:
 def analyze_vector(vector: list) -> str:
     has_o = HIT_O in vector
     has_x = HIT_X in vector
-    return VARIANT_GAME_NOT_FINISHED if HIT_EMPTY in vector else \
-        VARIANT_DRAW if has_o and has_x else \
-            VARIANT_O_WINS if has_o and not has_x else \
-                VARIANT_X_WINS if not has_o and has_x else \
-                    VARIANT_IMPOSSIBLE
+    return VARIANT_GAME_NOT_FINISHED if HIT_EMPTY in vector \
+        else VARIANT_DRAW if has_o and has_x \
+        else VARIANT_O_WINS if has_o and not has_x \
+        else VARIANT_X_WINS if not has_o and has_x \
+        else VARIANT_IMPOSSIBLE
 
 
 def analyze_vector_in_matrix(matrix: list, vector_point: list) -> str:
@@ -66,25 +66,18 @@ def analyze_vector_in_matrix(matrix: list, vector_point: list) -> str:
 
 
 def summarize_variants(variants: list, matrix: list):
-    result = VARIANT_DRAW
     # when the field has three Xs in a row as well as three Os in a row.
     count_o_wins = variants.count(VARIANT_O_WINS)
     count_x_wins = variants.count(VARIANT_X_WINS)
-    if count_o_wins > 0 and count_x_wins > 0:
-        result = VARIANT_IMPOSSIBLE
-    elif count_o_wins > 1 or count_x_wins > 1:
-        result = VARIANT_IMPOSSIBLE
-    # the field has a lot more Xs that Os or vice versa
+    # Comment about third impossible variant: the field has a lot more Xs that Os or vice versa
     # (if the difference is 2 or more, should be 1 or 0)
-    elif math.fabs(count_hits(matrix, HIT_X) - count_hits(matrix, HIT_O)) > 1:
-        result = VARIANT_IMPOSSIBLE
-    elif count_o_wins:
-        result = VARIANT_O_WINS
-    elif count_x_wins:
-        result = VARIANT_X_WINS
-    elif VARIANT_GAME_NOT_FINISHED in variants:
-        result = VARIANT_GAME_NOT_FINISHED
-    return result
+    return VARIANT_IMPOSSIBLE if count_o_wins > 0 and count_x_wins > 0 \
+        else VARIANT_IMPOSSIBLE if count_o_wins > 1 or count_x_wins > 1 \
+        else VARIANT_IMPOSSIBLE if math.fabs(count_hits(matrix, HIT_X) - count_hits(matrix, HIT_O)) > 1 \
+        else VARIANT_O_WINS if count_o_wins \
+        else VARIANT_X_WINS if count_x_wins \
+        else VARIANT_GAME_NOT_FINISHED if VARIANT_GAME_NOT_FINISHED in variants \
+        else VARIANT_DRAW
 
 
 def analyze_field(matrix: list):
