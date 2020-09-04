@@ -1,67 +1,52 @@
 import math
 
-HIT_EMPTY = '_'
-
-HIT_O = 'O'
-HIT_X = 'X'
-VARIANT_IMPOSSIBLE = "Impossible"
-VARIANT_O_WINS = "O wins"
-VARIANT_X_WINS = "X wins"
-VARIANT_DRAW = "Draw"
-VARIANT_GAME_NOT_FINISHED = "Game not finished"
-
-
-def convert_to_matrix(field_in_string: str) -> list:
-    matrix = []
-    for rowIndex in range(3):
-        row = []
-        for columnIndex in range(3):
-            row.append(field_in_string[rowIndex * 3 + columnIndex])
-        matrix.append(row)
-    return matrix
+HIT_EMPTY: str = '_'
+HIT_O: str = 'O'
+HIT_X: str = 'X'
+VARIANT_IMPOSSIBLE: str = "Impossible"
+VARIANT_O_WINS: str = "O wins"
+VARIANT_X_WINS: str = "X wins"
+VARIANT_DRAW: str = "Draw"
+VARIANT_GAME_NOT_FINISHED: str = "Game not finished"
 
 
-def print_field_from_string(field_in_string):
-    print('---------')
-    for rowIndex in range(3):
-        row = []
-        for columnIndex in range(3):
-            row.append(field_in_string[rowIndex * 3 + columnIndex])
-        print(f'| ' + ' '.join(row) + ' |')
-    print('---------')
+def convert_to_matrix(map_str: str) -> list:
+    return [[map_str[row_ind * 3 + column_ind] for column_ind in range(3)] for row_ind in range(3)]
 
 
-def print_field_from_matrix(field_in_matrix: list):
-    print('---------')
-    for rowIndex in range(3):
-        row = []
-        for columnIndex in range(3):
-            row.append(field_in_matrix[rowIndex][columnIndex])
-        print(f'| ' + ' '.join(row) + ' |')
-    print('---------')
+def print_field_from_string(map_str: str) -> None:
+    rows = [' '.join(['|'] + [process_cell(map_str[row * 3 + column]) for column in range(3)] + ['|']) for row in
+            range(3)]
+    print('\n'.join([get_horizontal_line()] + rows + [get_horizontal_line()]))
+
+
+def print_field_from_matrix(map_matrix: list) -> None:
+    rows = [' '.join(['|'] + [process_cell(map_matrix[row][column]) for column in range(3)] + ['|']) for row in
+            range(3)]
+    print('\n'.join([get_horizontal_line()] + rows + [get_horizontal_line()]))
+
+
+def get_horizontal_line() -> str:
+    return '-' * 9
+
+
+def process_cell(cell_val: str) -> str:
+    return ' ' if cell_val == HIT_EMPTY else cell_val
 
 
 def count_hits(matrix: list, hit: str) -> int:
-    count = 0
     row: list
-    for row in matrix:
-        count += row.count(hit)
-    return count
+    return sum([row.count(hit) for row in matrix])
 
 
 def analyze_vector(vector: list) -> str:
-    result = VARIANT_IMPOSSIBLE
     has_o = HIT_O in vector
     has_x = HIT_X in vector
-    if HIT_EMPTY in vector:
-        result = VARIANT_GAME_NOT_FINISHED
-    elif has_o and has_x:
-        result = VARIANT_DRAW
-    elif has_o and not has_x:
-        result = VARIANT_O_WINS
-    elif not has_o and has_x:
-        result = VARIANT_X_WINS
-    return result
+    return VARIANT_GAME_NOT_FINISHED if HIT_EMPTY in vector else \
+        VARIANT_DRAW if has_o and has_x else \
+            VARIANT_O_WINS if has_o and not has_x else \
+                VARIANT_X_WINS if not has_o and has_x else \
+                    VARIANT_IMPOSSIBLE
 
 
 def analyze_vector_in_matrix(matrix: list, vector_point: list) -> str:
@@ -71,15 +56,11 @@ def analyze_vector_in_matrix(matrix: list, vector_point: list) -> str:
     x_stop: int
     y_stop: int
     (x_stop, y_stop) = vector_point[1]
-    vector = []
     x_div = x_stop - x_start
     y_div = y_stop - y_start
     x_step = int(x_div / math.fabs(x_div)) if x_div != 0 else 0
     y_step = int(y_div / math.fabs(y_div)) if y_div != 0 else 0
-    for step in range(3):
-        x_coord = x_start + step * x_step
-        y_coord = y_start + step * y_step
-        vector.append(matrix[x_coord][y_coord])
+    vector = [matrix[x_start + step * x_step][y_start + step * y_step] for step in range(3)]
     # print([vector_point, vector, analyze_vector(vector), ])
     return analyze_vector(vector)
 
@@ -108,22 +89,11 @@ def summarize_variants(variants: list, matrix: list):
 
 def analyze_field(matrix: list):
     vectors = [
-        [(0, 0), (0, 2), ],
-        [(1, 0), (1, 2), ],
-        [(2, 0), (2, 2), ],
-
-        [(0, 0), (2, 0), ],
-        [(0, 1), (2, 1), ],
-        [(0, 2), (2, 2), ],
-
-        [(0, 0), (2, 2), ],
-        [(0, 2), (2, 0), ],
+        [(0, 0), (0, 2), ], [(1, 0), (1, 2), ], [(2, 0), (2, 2), ],  # horizontal
+        [(0, 0), (2, 0), ], [(0, 1), (2, 1), ], [(0, 2), (2, 2), ],  # vertical
+        [(0, 0), (2, 2), ], [(0, 2), (2, 0), ],  # diagonals
     ]
-    variants = []
-    for vector in vectors:
-        variants.append(analyze_vector_in_matrix(matrix, vector))
-    # print(variants)
-    return summarize_variants(variants, matrix)
+    return summarize_variants([analyze_vector_in_matrix(matrix, vector) for vector in vectors], matrix)
 
 
 def tic_tac_toe_generate_simple_map(input_cells: str):
@@ -140,12 +110,7 @@ def tic_tac_toe(input_cells: str):
     print(analyze_field(matrix))
 
 
-def main():
-    input_cells = input('Enter cells:')
-    tic_tac_toe(input_cells)
-
-
-def test_generate_simple_map_1():
+def test_case_generate_simple_map_1():
     return ('TEST CASE 1', 'XXXOO__O_', '''
 ---------
 | X X X |
@@ -156,7 +121,7 @@ X wins
 ''')
 
 
-def test_generate_simple_map_2():
+def test_case_generate_simple_map_2():
     return ('TEST CASE 2', 'XOXOXOXXO', '''
 ---------
 | X O X |
@@ -167,7 +132,7 @@ X wins
 ''')
 
 
-def test_generate_simple_map_3():
+def test_case_generate_simple_map_3():
     return ('TEST CASE 3', 'XOOOXOXXO', '''
 ---------
 | X O O |
@@ -178,7 +143,7 @@ O wins
 ''')
 
 
-def test_generate_simple_map_4():
+def test_case_generate_simple_map_4():
     return ('TEST CASE 4', 'XOXOOXXXO', '''
 ---------
 | X O X |
@@ -189,7 +154,7 @@ Draw
 ''')
 
 
-def test_generate_simple_map_5():
+def test_case_generate_simple_map_5():
     return ('TEST CASE 5', 'XO_OOX_X_', '''
 ---------
 | X O   |
@@ -200,7 +165,7 @@ Game not finished
 ''')
 
 
-def test_generate_simple_map_6():
+def test_case_generate_simple_map_6():
     return ('TEST CASE 6', 'XO_XO_XOX', '''
 ---------
 | X O _ |
@@ -211,29 +176,201 @@ Impossible
 ''')
 
 
-def test_case_runner_generate_simple_map(test_case: tuple):
+def test_runner_generate_simple_map(test_case: tuple):
     test_title: str
     test_string: str
     expected_string: str
     (test_title, test_string, expected_string) = test_case
-    print(f'\n\n*************')
-    print(f'{test_title}')
+    print(f'\n\n\n')
+    print(f'|||||||||||||||||||||||||||||||')
+    print(f'*******************************')
+    print(f'{test_title} FOR GENERATE_SIMPLE_MAP')
     print(f'Enter cells: > {test_string}')
     print('Expected:' + expected_string)
     print('$$$ REAL:')
-    tic_tac_toe(test_string)
+    tic_tac_toe_generate_simple_map(test_string)
+
+
+def test_case_first_move_1():
+    init_map = 'X_X_O____'
+    try_coords = ['1 1', ]
+    return ('TEST CASE FIRST MOVE 1', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+| X   X |
+|   O   |
+|       |
+---------
+Enter the coordinates: > {try_coords[0]}
+---------
+| X   X |
+|   O   |
+| X     |
+---------
+''')
+
+
+def test_case_first_move_2():
+    init_map = '_XXOO_OX_'
+    try_coords = ['1 3', ]
+    return ('TEST CASE FIRST MOVE 2', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+|   X X |
+| O O   |
+| O X   |
+---------
+Enter the coordinates: > {try_coords[0]}
+---------
+| X X X |
+| O O   |
+| O X   |
+---------
+''')
+
+
+def test_case_first_move_3():
+    init_map = '_XXOO_OX_'
+    try_coords = ['3 1', ]
+    return ('TEST CASE FIRST MOVE 3', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+|   X X |
+| O O   |
+| O X   |
+---------
+Enter the coordinates: > {try_coords[0]}
+---------
+|   X X |
+| O O   |
+| O X X |
+---------
+''')
+
+
+def test_case_first_move_4():
+    init_map = '_XXOO_OX_'
+    try_coords = ['3 2', ]
+    return ('TEST CASE FIRST MOVE 4', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+|   X X |
+| O O   |
+| O X   |
+---------
+Enter the coordinates: > {try_coords[0]}
+---------
+|   X X |
+| O O X |
+| O X   |
+---------
+''')
+
+
+def test_case_first_move_5():
+    init_map = '_XXOO_OX_'
+    try_coords = ['1 1', '1 3', ]
+    return ('TEST CASE FIRST MOVE 5', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+|   X X |
+| O O   |
+| O X   |
+---------
+Enter the coordinates: > {try_coords[0]}
+This cell is occupied! Choose another one!
+Enter the coordinates: > {try_coords[1]}
+---------
+| X X X |
+| O O   |
+| O X   |
+---------
+''')
+
+
+def test_case_first_move_6():
+    init_map = '_XXOO_OX_'
+    try_coords = ['one', 'one three', '1 3', ]
+    return ('TEST CASE FIRST MOVE 6', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+|   X X |
+| O O   |
+| O X   |
+---------
+Enter the coordinates: > {try_coords[0]}
+You should enter numbers!
+Enter the coordinates: > {try_coords[1]}
+You should enter numbers!
+Enter the coordinates: > {try_coords[2]}
+---------
+| X X X |
+| O O   |
+| O X   |
+---------
+''')
+
+
+def test_case_first_move_7():
+    init_map = '_XXOO_OX_'
+    try_coords = ['4 1', '1 4', '1 3', ]
+    return ('TEST CASE FIRST MOVE 7', init_map, try_coords, f'''
+Enter cells: > {init_map}
+---------
+|   X X |
+| O O   |
+| O X   |
+---------
+Enter the coordinates: > {try_coords[0]}
+Coordinates should be from 1 to 3!
+Enter the coordinates: > {try_coords[1]}
+Coordinates should be from 1 to 3!
+Enter the coordinates: > {try_coords[2]}
+---------
+| X X X |
+| O O   |
+| O X   |
+---------    
+''')
+
+
+def test_runner_first_move(test_case: tuple):
+    test_title: str
+    init_map_str: str
+    try_coords: str
+    expected_string: str
+    (test_title, init_map_str, try_coords, expected_string) = test_case
+    print(f'\n\n\n')
+    print(f'|||||||||||||||||||||||||||||||')
+    print(f'*******************************')
+    print(f'{test_title}')
+    print('$$$ Expected: $$$\n' + expected_string)
+    print('$$$ REAL:')
+    tic_tac_toe_generate_simple_map(init_map_str)
 
 
 def main_test():
     # tests for generate_simple_map
-    test_case_runner_generate_simple_map(test_generate_simple_map_1())
-    test_case_runner_generate_simple_map(test_generate_simple_map_2())
-    test_case_runner_generate_simple_map(test_generate_simple_map_3())
-    test_case_runner_generate_simple_map(test_generate_simple_map_4())
-    test_case_runner_generate_simple_map(test_generate_simple_map_5())
-    test_case_runner_generate_simple_map(test_generate_simple_map_6())
+    test_runner_generate_simple_map(test_case_generate_simple_map_1())
+    test_runner_generate_simple_map(test_case_generate_simple_map_2())
+    test_runner_generate_simple_map(test_case_generate_simple_map_3())
+    test_runner_generate_simple_map(test_case_generate_simple_map_4())
+    test_runner_generate_simple_map(test_case_generate_simple_map_5())
+    test_runner_generate_simple_map(test_case_generate_simple_map_6())
 
-    #
+    # tests for first move
+    test_runner_first_move(test_case_first_move_1())
+    test_runner_first_move(test_case_first_move_2())
+    test_runner_first_move(test_case_first_move_3())
+    test_runner_first_move(test_case_first_move_4())
+    test_runner_first_move(test_case_first_move_5())
+    test_runner_first_move(test_case_first_move_6())
+    test_runner_first_move(test_case_first_move_7())
+
+
+def main():
+    input_cells = input('Enter cells:')
+    tic_tac_toe(input_cells)
 
 
 main_test()
