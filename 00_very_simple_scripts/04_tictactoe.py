@@ -1,6 +1,7 @@
 import math
 
-HIT_EMPTY: str = '_'
+HIT_EMPTY_UNDERSCORE: str = '_'
+HIT_EMPTY: str = ' '
 HIT_O: str = 'O'
 HIT_X: str = 'X'
 VARIANT_IMPOSSIBLE: str = "Impossible"
@@ -14,16 +15,16 @@ def convert_to_matrix(map_str: str) -> list:
     return [[map_str[row_ind * 3 + column_ind] for column_ind in range(3)] for row_ind in range(3)]
 
 
-def print_field_from_string(map_str: str) -> None:
+def str_to_str_map(map_str: str) -> str:
     rows = [' '.join(['|'] + [process_cell(map_str[row * 3 + column]) for column in range(3)] + ['|']) for row in
             range(3)]
-    print('\n'.join([get_horizontal_line()] + rows + [get_horizontal_line()]))
+    return '\n'.join([get_horizontal_line()] + rows + [get_horizontal_line()])
 
 
-def print_field_from_matrix(map_matrix: list) -> None:
+def matrix_to_str_map(map_matrix: list) -> str:
     rows = [' '.join(['|'] + [process_cell(map_matrix[row][column]) for column in range(3)] + ['|']) for row in
             range(3)]
-    print('\n'.join([get_horizontal_line()] + rows + [get_horizontal_line()]))
+    return '\n'.join([get_horizontal_line()] + rows + [get_horizontal_line()])
 
 
 def get_horizontal_line() -> str:
@@ -31,7 +32,7 @@ def get_horizontal_line() -> str:
 
 
 def process_cell(cell_val: str) -> str:
-    return ' ' if cell_val == HIT_EMPTY else cell_val
+    return ' ' if cell_val == HIT_EMPTY_UNDERSCORE else cell_val
 
 
 def count_hits(matrix: list, hit: str) -> int:
@@ -42,7 +43,7 @@ def count_hits(matrix: list, hit: str) -> int:
 def analyze_vector(vector: list) -> str:
     has_o = HIT_O in vector
     has_x = HIT_X in vector
-    return VARIANT_GAME_NOT_FINISHED if HIT_EMPTY in vector \
+    return VARIANT_GAME_NOT_FINISHED if HIT_EMPTY_UNDERSCORE in vector \
         else VARIANT_DRAW if has_o and has_x \
         else VARIANT_O_WINS if has_o and not has_x \
         else VARIANT_X_WINS if not has_o and has_x \
@@ -89,18 +90,64 @@ def analyze_field(matrix: list):
     return summarize_variants([analyze_vector_in_matrix(matrix, vector) for vector in vectors], matrix)
 
 
-def tic_tac_toe_generate_simple_map(input_cells: str):
-    # print_field_from_string(input_cells)
-    matrix = convert_to_matrix(input_cells)
-    print_field_from_matrix(matrix)
-    print(analyze_field(matrix))
+def parse_input_coord(input_str: str) -> list:
+    return [int(n) if n.isnumeric() else None for n in input_str.split(' ')]
 
 
-def tic_tac_toe(input_cells: str):
-    # print_field_from_string(input_cells)
-    matrix = convert_to_matrix(input_cells)
-    print_field_from_matrix(matrix)
-    print(analyze_field(matrix))
+def is_only_numbers(list_numbers: list) -> bool:
+    only_numbers = True
+    n: str
+    for n in list_numbers:
+        if type(n) is not int:
+            only_numbers = False
+            break
+    return only_numbers
+
+
+def is_occupied_cell(matrix: list, coord: list) -> bool:
+    val = matrix[coord[0]][coord[1]]
+    return val != HIT_EMPTY and val != HIT_EMPTY_UNDERSCORE
+
+
+def is_valid_range_input_coord(coord: list) -> bool:
+    is_valid_range = True
+    n: int
+    for n in coord:
+        if n < 1 or 3 < n:
+            is_valid_range = False
+            break
+    return is_valid_range
+
+
+def convert_input_coord_to_inner(input_coord: list) -> list:
+    row_input: int = input_coord[1]
+    column_input: int = input_coord[0]
+
+    row_inner: int = - row_input + 3
+    column_inner: int = column_input - 1
+
+    inner_coord = [row_inner, column_inner]
+    return inner_coord
+
+
+def validate_input_coord(input_coord: list, matrix: list) -> bool:
+    # only two coordinates
+    error = "You should enter numbers!" if len(input_coord) != 2 \
+        else "You should enter numbers!" if not is_only_numbers(input_coord) \
+        else "Coordinates should be from 1 to 3!" if not is_valid_range_input_coord(input_coord) \
+        else "This cell is occupied! Choose another one!" \
+        if is_occupied_cell(matrix, convert_input_coord_to_inner(input_coord)) \
+        else ""
+    if len(error) > 0:
+        print(error)
+    return len(error) == 0
+
+
+def hit_cell_in_matrix(matrix: list, inner_coord: list, val: str) -> list:
+    row_inner: int = inner_coord[0]
+    column_inner: int = inner_coord[1]
+    matrix[row_inner][column_inner] = val
+    return matrix
 
 
 def test_case_generate_simple_map_1():
@@ -167,21 +214,6 @@ def test_case_generate_simple_map_6():
 ---------
 Impossible
 ''')
-
-
-def test_runner_generate_simple_map(test_case: tuple):
-    test_title: str
-    test_string: str
-    expected_string: str
-    (test_title, test_string, expected_string) = test_case
-    print(f'\n\n\n')
-    print(f'|||||||||||||||||||||||||||||||')
-    print(f'*******************************')
-    print(f'{test_title} FOR GENERATE_SIMPLE_MAP')
-    print(f'Enter cells: > {test_string}')
-    print('Expected:' + expected_string)
-    print('$$$ REAL:')
-    tic_tac_toe_generate_simple_map(test_string)
 
 
 def test_case_first_move_1():
@@ -327,10 +359,27 @@ Enter the coordinates: > {try_coords[2]}
 ''')
 
 
+def test_runner_generate_simple_map(test_case: tuple):
+    test_title: str
+    test_string: str
+    expected_string: str
+    (test_title, test_string, expected_string) = test_case
+    print(f'\n\n\n')
+    print(f'|||||||||||||||||||||||||||||||')
+    print(f'*******************************')
+    print(f'{test_title} FOR GENERATE_SIMPLE_MAP')
+    print(f'Enter cells: > {test_string}')
+    print('Expected:' + expected_string)
+    print('$$$ REAL:')
+    matrix = convert_to_matrix(test_string)
+    print(matrix_to_str_map(matrix))
+    print(analyze_field(matrix))
+
+
 def test_runner_first_move(test_case: tuple):
     test_title: str
     init_map_str: str
-    try_coords: str
+    try_coords: list
     expected_string: str
     (test_title, init_map_str, try_coords, expected_string) = test_case
     print(f'\n\n\n')
@@ -339,7 +388,29 @@ def test_runner_first_move(test_case: tuple):
     print(f'{test_title}')
     print('$$$ Expected: $$$\n' + expected_string)
     print('$$$ REAL:')
-    tic_tac_toe_generate_simple_map(init_map_str)
+    print(f'Enter cells: {init_map_str}')
+    # print(str_to_str_map(init_map_str))
+    matrix = convert_to_matrix(init_map_str)
+    print(matrix_to_str_map(matrix))
+    print(analyze_field(matrix))
+
+    parse_coord = []
+    try_count = 0
+    while True:
+        try_count += 1
+        try_index = try_count - 1
+        if try_index >= len(try_coords):
+            print(f'We reached end try counts. try_counts = {try_count}')
+            break
+        try_coord = try_coords[try_index]
+        print(f'Enter the coordinates: {try_coord}')
+        parse_coord = parse_input_coord(try_coord)
+        if validate_input_coord(parse_coord, matrix):
+            break
+
+    if len(parse_coord) > 0:
+        hit_cell_in_matrix(matrix, convert_input_coord_to_inner(parse_coord), HIT_X)
+        print(matrix_to_str_map(matrix))
 
 
 def main_test():
@@ -363,8 +434,17 @@ def main_test():
 
 def main():
     input_cells = input('Enter cells:')
-    tic_tac_toe(input_cells)
+    matrix = convert_to_matrix(input_cells)
+    print(matrix_to_str_map(matrix))
+    while True:
+        input_coord = input('Enter the coordinates:')
+        parse_coord = parse_input_coord(input_coord)
+        if validate_input_coord(parse_coord, matrix):
+            break
+    if len(parse_coord) > 0:
+        hit_cell_in_matrix(matrix, convert_input_coord_to_inner(parse_coord), HIT_X)
+        print(matrix_to_str_map(matrix))
 
 
-main_test()
-# main()
+# main_test()
+main()
