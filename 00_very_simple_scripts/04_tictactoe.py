@@ -81,7 +81,7 @@ def summarize_variants(variants: list, matrix: list):
         else VARIANT_DRAW
 
 
-def analyze_field(matrix: list):
+def analyze_map(matrix: list):
     vectors = [
         [(0, 0), (0, 2), ], [(1, 0), (1, 2), ], [(2, 0), (2, 2), ],  # horizontal
         [(0, 0), (2, 0), ], [(0, 1), (2, 1), ], [(0, 2), (2, 2), ],  # vertical
@@ -359,6 +359,77 @@ Enter the coordinates: > {try_coords[2]}
 ''')
 
 
+def test_case_full_game():
+    input_strs = [
+        '2 2',
+        '2 2',
+        'two two',
+        '1 4',
+        '1 3',
+        '3 1',
+        '1 2',
+        '1 1',
+        '3 2',
+        '2 1',
+    ]
+    return ('TEST CASE FULL GAME 1', input_strs, f'''
+---------
+|       |
+|       |
+|       |
+---------
+Enter the coordinates: > {input_strs[0]}
+---------
+|       |
+|   X   |
+|       |
+---------
+Enter the coordinates: > {input_strs[1]}
+This cell is occupied! Choose another one!
+Enter the coordinates: > {input_strs[2]}
+You should enter numbers!
+Enter the coordinates: > {input_strs[3]}
+Coordinates should be from 1 to 3!
+Enter the coordinates: > {input_strs[4]}
+---------
+| O     |
+|   X   |
+|       |
+---------
+Enter the coordinates: > {input_strs[5]}
+---------
+| O     |
+|   X   |
+|     X |
+---------
+Enter the coordinates: > {input_strs[6]}
+---------
+| O     |
+| O X   |
+|     X |
+---------
+Enter the coordinates: > {input_strs[7]}
+---------
+| O     |
+| O X   |
+| X   X |
+---------
+Enter the coordinates: > {input_strs[8]}
+---------
+| O     |
+| O X O |
+| X   X |
+---------
+Enter the coordinates: > {input_strs[9]}
+---------
+| O     |
+| O X O |
+| X X X |
+---------
+X wins    
+''')
+
+
 def test_runner_generate_simple_map(test_case: tuple):
     test_title: str
     test_string: str
@@ -373,7 +444,7 @@ def test_runner_generate_simple_map(test_case: tuple):
     print('$$$ REAL:')
     matrix = convert_to_matrix(test_string)
     print(matrix_to_str_map(matrix))
-    print(analyze_field(matrix))
+    print(analyze_map(matrix))
 
 
 def test_runner_first_move(test_case: tuple):
@@ -392,7 +463,7 @@ def test_runner_first_move(test_case: tuple):
     # print(str_to_str_map(init_map_str))
     matrix = convert_to_matrix(init_map_str)
     print(matrix_to_str_map(matrix))
-    print(analyze_field(matrix))
+    print(analyze_map(matrix))
 
     parse_coord = []
     try_count = 0
@@ -413,6 +484,51 @@ def test_runner_first_move(test_case: tuple):
         print(matrix_to_str_map(matrix))
 
 
+def test_runner_full_game(test_case: tuple):
+    test_title: str
+    try_coords: list
+    expected_string: str
+    (test_title, try_coords, expected_string) = test_case
+    print(f'\n\n\n')
+    print(f'|||||||||||||||||||||||||||||||')
+    print(f'*******************************')
+    print(f'{test_title}')
+    print('$$$ Expected: $$$\n' + expected_string)
+    print('$$$ REAL:')
+    init_map_str = '_' * 9
+    matrix = convert_to_matrix(init_map_str)
+    print(matrix_to_str_map(matrix))
+    # print(analyze_field(matrix))
+
+    parse_coord = []
+    try_count = 0
+    hit_val = None
+    while True:
+        hit_val = HIT_X if hit_val == HIT_O or hit_val is None else HIT_O
+
+        while True:
+            try_count += 1
+            try_index = try_count - 1
+            if try_index >= len(try_coords):
+                print(f'We reached end try counts. try_counts = {try_count}')
+                break
+            try_coord = try_coords[try_index]
+            print(f'Enter the coordinates: {try_coord}')
+            parse_coord = parse_input_coord(try_coord)
+            if validate_input_coord(parse_coord, matrix):
+                break
+
+        if len(parse_coord) == 0:
+            break
+
+        hit_cell_in_matrix(matrix, convert_input_coord_to_inner(parse_coord), hit_val)
+        print(matrix_to_str_map(matrix))
+        result = analyze_map(matrix)
+        if result in [VARIANT_X_WINS, VARIANT_O_WINS, VARIANT_DRAW, VARIANT_IMPOSSIBLE]:
+            print(result)
+            break
+
+
 def main_test():
     # tests for generate_simple_map
     test_runner_generate_simple_map(test_case_generate_simple_map_1())
@@ -431,19 +547,30 @@ def main_test():
     test_runner_first_move(test_case_first_move_6())
     test_runner_first_move(test_case_first_move_7())
 
+    test_runner_full_game(test_case_full_game())
+
 
 def main():
-    input_cells = input('Enter cells:')
-    matrix = convert_to_matrix(input_cells)
+    init_map_str = '_' * 9
+    matrix = convert_to_matrix(init_map_str)
     print(matrix_to_str_map(matrix))
+
+    hit_val = None
     while True:
-        input_coord = input('Enter the coordinates:')
-        parse_coord = parse_input_coord(input_coord)
-        if validate_input_coord(parse_coord, matrix):
-            break
-    if len(parse_coord) > 0:
-        hit_cell_in_matrix(matrix, convert_input_coord_to_inner(parse_coord), HIT_X)
+        hit_val = HIT_X if hit_val == HIT_O or hit_val is None else HIT_O
+
+        while True:
+            input_coord = input('Enter the coordinates:')
+            parse_coord = parse_input_coord(input_coord)
+            if validate_input_coord(parse_coord, matrix):
+                break
+
+        hit_cell_in_matrix(matrix, convert_input_coord_to_inner(parse_coord), hit_val)
         print(matrix_to_str_map(matrix))
+        result = analyze_map(matrix)
+        if result in [VARIANT_X_WINS, VARIANT_O_WINS, VARIANT_DRAW, VARIANT_IMPOSSIBLE]:
+            print(result)
+            break
 
 
 # main_test()
