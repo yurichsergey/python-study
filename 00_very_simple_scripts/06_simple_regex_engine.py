@@ -1,5 +1,8 @@
 import unittest
 
+ANY_SYMBOL = 'any_symbol'
+MAX_REPETITION = 99999
+
 
 def match_char(regex_char: str, checked_char: str) -> bool:
     return (regex_char == checked_char) or \
@@ -59,7 +62,62 @@ def match_with_meta_start_and_end_string(regex: str, checked: str) -> bool:
     return match
 
 
-class TestRegex(unittest.TestCase):
+def transform_regex(regex: str) -> list:
+    obj: list = []
+    ind: int = -1
+    while True:
+        ind += 1
+        # print('+++++++++++')
+        # print(regex)
+        # print(ind)
+        # print((ind + 1) >= len(regex))
+        if (ind + 1) > len(regex):
+            break
+        letter: str = regex[ind]
+        if letter == '.':
+            letter = ANY_SYMBOL
+        quantum_letter: str = regex[ind + 1] if (ind + 1) < len(regex) else ''
+        if quantum_letter not in ['?', '+', '*', ]:
+            quantum_letter = ''
+        if quantum_letter:
+            ind += 1
+        quantum = (0, 1,) if quantum_letter == '?' \
+            else (1, MAX_REPETITION) if quantum_letter == '+' \
+            else (0, MAX_REPETITION) if quantum_letter == '*' \
+            else (1, 1,)
+        obj.append((letter, quantum,))
+    return obj
+
+
+class TestTransformRegex(unittest.TestCase):
+    cases = [
+        ('', [],),
+        ('a', [('a', (1, 1,),), ],),
+        ('.', [(ANY_SYMBOL, (1, 1,),), ],),
+        ('cat', [('c', (1, 1,),), ('a', (1, 1,),), ('t', (1, 1,),), ],),
+        ('.at_', [(ANY_SYMBOL, (1, 1,),), ('a', (1, 1,),), ('t', (1, 1,),), ('_', (1, 1,),), ],),
+        ('.p.', [(ANY_SYMBOL, (1, 1,),), ('p', (1, 1,),), (ANY_SYMBOL, (1, 1,),), ],),
+        ('lou?r', [('l', (1, 1,),), ('o', (1, 1,),), ('u', (0, 1,),), ('r', (1, 1,),), ],),
+        ('u?r', [('u', (0, 1,),), ('r', (1, 1,),), ],),
+        ('lou?', [('l', (1, 1,),), ('o', (1, 1,),), ('u', (0, 1,),), ],),
+        ('lou*r', [('l', (1, 1,),), ('o', (1, 1,),), ('u', (0, MAX_REPETITION,),), ('r', (1, 1,),), ],),
+        ('lou+r', [('l', (1, 1,),), ('o', (1, 1,),), ('u', (1, MAX_REPETITION,),), ('r', (1, 1,),), ],),
+        ('l.*r', [('l', (1, 1,),), (ANY_SYMBOL, (0, MAX_REPETITION,),), ('r', (1, 1,),), ],),
+    ]
+
+    def test(self) -> None:
+        case: tuple
+        for case in self.cases:
+            with self.subTest(case=case):
+                regex: str
+                expected: bool
+                (regex, expected,) = case
+                actual = transform_regex(regex)
+                print(f'case: {str(case)} || actual: {str(actual)}')
+                self.assertEqual(expected, actual, f'case: {str(case)}')
+
+
+class TestMatchingRegex(unittest.TestCase):
     cases_one_character = [
         ('a', 'a', True,),
         ('.', 'a', True,),
@@ -152,7 +210,5 @@ def main():
     print(match_with_meta_start_and_end_string(regex, checked_str))
 
 
-# if __name__ == '__MAIN__':
-#     main()
-
-main()
+if __name__ == '__main__':
+    main()
