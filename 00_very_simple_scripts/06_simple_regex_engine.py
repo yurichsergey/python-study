@@ -4,46 +4,45 @@ ANY_SYMBOL = 'any_symbol'
 MAX_REPETITION = 99999
 
 
-def match_char(regex_char: str, checked_char: str) -> bool:
-    return (regex_char == checked_char) or \
-           (regex_char == '.') or \
-           (regex_char == '')
-
-
-def match_equal_strings(regex: str, checked: str) -> bool:
-    if len(regex) != len(checked):
-        return False
-    match = True
-    ind: int
-    for ind in range(len(regex)):
-        regex_char: str = regex[ind]
-        checked_char: str = checked[ind] if len(checked) > ind else ''
-        match = match_char(regex_char, checked_char)
-        if match is False:
+def count_matching_char_forward(regex_char: str, checked_ind: int, checked: str) -> int:
+    count_matching = 0
+    for i in range(checked_ind, len(checked)):
+        if (regex_char != checked[i]) and (regex_char != ANY_SYMBOL):
             break
+        count_matching += 1
+    return count_matching
+
+
+def match_from_start_string(regex: list, checked: str) -> bool:
+    match = True
+    checked_ind: int = 0
+    for reg_group in regex:
+        regex_char: str
+        count_min: int
+        count_max: int
+        (regex_char, (count_min, count_max)) = reg_group
+
+        current_count: int = count_matching_char_forward(regex_char, checked_ind, checked)
+        if current_count < count_min:
+            match = False
+            break
+        if current_count > count_max:
+            current_count = count_max
+        checked_ind += current_count
     return match
 
 
-def match_substr(regex: str, checked: str, diff_length: int) -> bool:
-    match: bool = True
+def match_pure_regex_forward(regex: list, checked: str) -> bool:
+    match: bool = match_from_start_string(regex, checked)  # for empty string
     start_ind: int
-    for start_ind in range(diff_length + 1):
-        end_ind: int = len(checked) - diff_length + start_ind
-        # print(f'{str(regex)} || {str(checked[start_ind:end_ind])}')
-        match = match_equal_strings(regex, checked[start_ind:end_ind])
+    for start_ind in range(len(checked)):
+        match = match_from_start_string(regex, checked[start_ind:])
         if match is True:
             break
     return match
 
 
-def match_different_strings(regex: str, checked: str) -> bool:
-    diff_length: int = len(checked) - len(regex)
-    if diff_length < 0:
-        return False
-    return match_substr(regex, checked, diff_length)
-
-
-def match_with_meta_start_and_end_string(regex: str, checked: str) -> bool:
+def match_with_meta_start_and_end_string(regex: list, checked: str) -> bool:
     pure_regex: str = regex
     pure_checked: str = checked
     is_fixed_start: bool = pure_regex.startswith('^')
@@ -57,8 +56,8 @@ def match_with_meta_start_and_end_string(regex: str, checked: str) -> bool:
     elif is_fixed_end:
         pure_regex = pure_regex[:-1]
         pure_checked = checked[-len(pure_regex):]
-    match = match_equal_strings(pure_regex, pure_checked) if is_equal_match \
-        else match_different_strings(pure_regex, pure_checked)
+    match = match_from_start_string(pure_regex, pure_checked) if is_equal_match \
+        else match_pure_regex(pure_regex, pure_checked)
     return match
 
 
@@ -67,10 +66,6 @@ def transform_regex(regex: str) -> list:
     ind: int = -1
     while True:
         ind += 1
-        # print('+++++++++++')
-        # print(regex)
-        # print(ind)
-        # print((ind + 1) >= len(regex))
         if (ind + 1) > len(regex):
             break
         letter: str = regex[ind]
@@ -113,29 +108,23 @@ class TestTransformRegex(unittest.TestCase):
                 expected: bool
                 (regex, expected,) = case
                 actual = transform_regex(regex)
-                print(f'case: {str(case)} || actual: {str(actual)}')
+                # print(f'case: {str(case)} || actual: {str(actual)}')
                 self.assertEqual(expected, actual, f'case: {str(case)}')
 
 
 class TestMatchingRegex(unittest.TestCase):
-    cases_one_character = [
+    cases_pure_regex = [
         ('a', 'a', True,),
         ('.', 'a', True,),
         ('', 'a', True,),
         ('', '', True,),
         ('a', '', False,),
         ('a', 'b', False,),
-    ]
-
-    cases_equal_length = [
         ('apple', 'apple', True,),
         ('.pple', 'apple', True,),
         ('appl.', 'apple', True,),
         ('.....', 'apple', True,),
         ('peach', 'apple', False,),
-    ]
-
-    cases_different_length = [
         ('apple', 'apple', True,),
         ('ap', 'apple', True,),
         ('le', 'apple', True,),
@@ -146,7 +135,20 @@ class TestMatchingRegex(unittest.TestCase):
         ('apple_', 'apple', False,),
     ]
 
-    cases_start_and_end_strings = [
+    cases_quantium = [
+        ('colou?r', 'color', True,),
+        ('colou?r', 'colour', True,),
+        ('colou?r', 'colouur', False,),
+        ('colou*r', 'color', True,),
+        ('colou*r', 'colour', True,),
+        ('colou*r', 'colouur', True,),
+        ('col.*r', 'color', True,),
+        ('col.*r', 'colour', True,),
+        ('col.*r', 'colr', True,),
+        ('col.*r', 'collar', True,),
+    ]
+
+    cases_fixed_start_or_end = [
         ('^app', 'apple', True,),
         ('le$', 'apple', True,),
         ('^a', 'apple', True,),
@@ -158,19 +160,6 @@ class TestMatchingRegex(unittest.TestCase):
         ('^apple$', 'apple pie', False,),
         ('app$', 'apple', False,),
         ('^le', 'apple', False,),
-    ]
-
-    cases_controlling_repetition = [
-        ('colou?r', 'color', True,),
-        ('colou?r', 'colour', True,),
-        ('colou?r', 'colouur', False,),
-        ('colou*r', 'color', True,),
-        ('colou*r', 'colour', True,),
-        ('colou*r', 'colouur', True,),
-        ('col.*r', 'color', True,),
-        ('col.*r', 'colour', True,),
-        ('col.*r', 'colr', True,),
-        ('col.*r', 'collar', True,),
         ('col.*r$', 'colors', False,),
     ]
 
@@ -183,24 +172,17 @@ class TestMatchingRegex(unittest.TestCase):
                 expected: bool
                 (regex, test_str, expected,) = case
                 actual = fl(regex, test_str)
-                print(f'case: {str(case)}')
+                # print(f'case: {str(case)}')
                 self.assertEqual(expected, actual, f'case: {str(case)}')
 
-    def test_one_character_cases(self):
-        cases = self.cases_one_character
-        self.run_case(cases, lambda regex, checked: match_char(regex, checked))
-
-    def test_equal_length(self):
-        cases = self.cases_equal_length
-        self.run_case(cases, lambda regex, checked: match_equal_strings(regex, checked))
-
-    def test_different_length(self):
-        cases = self.cases_one_character + self.cases_equal_length + self.cases_different_length
-        self.run_case(cases, lambda regex, checked: match_different_strings(regex, checked))
+    def test_pure_regex(self):
+        cases = self.cases_pure_regex + self.cases_pure_regex
+        print('+++++++++++++++++++++++++++++++++++')
+        self.run_case(cases, lambda regex, checked: match_pure_regex_forward(transform_regex(regex), checked))
 
     def test_meta_start_and_end_strings(self):
-        cases = self.cases_one_character + self.cases_equal_length + self.cases_different_length \
-                + self.cases_start_and_end_strings
+        cases = self.cases_pure_regex + self.cases_pure_regex \
+                + self.cases_fixed_start_or_end
         self.run_case(cases, lambda regex, checked: match_with_meta_start_and_end_string(regex, checked))
 
 
