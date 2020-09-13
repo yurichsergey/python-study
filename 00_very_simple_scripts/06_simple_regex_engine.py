@@ -4,39 +4,67 @@ ANY_SYMBOL = 'any_symbol'
 MAX_REPETITION = 99999
 
 
-def count_matching_char_forward(regex_char: str, checked_ind: int, checked: str) -> int:
+class SearchDirectionInterface:
+    def change_counter(self, counter: int, value: int) -> int:
+        pass
+
+    def get_range(self, start: int, string: str) -> range:
+        pass
+
+    def get_init_index(self) -> int:
+        pass
+
+
+class SearchForwardDirection(SearchDirectionInterface):
+    def change_counter(self, counter: int, value: int) -> int:
+        return counter + value
+
+    def get_range(self, start: int, string: str) -> range:
+        return range(start, len(string))
+
+    def get_init_index(self) -> int:
+        return 0
+
+
+def count_matching_char(
+        regex_char: str,
+        checked_ind: int,
+        checked: str,
+        search_direction: SearchDirectionInterface
+) -> int:
     count_matching = 0
-    for i in range(checked_ind, len(checked)):
+    # for i in range(checked_ind, len(checked)):
+    for i in search_direction.get_range(checked_ind, checked):
         if (regex_char != checked[i]) and (regex_char != ANY_SYMBOL):
             break
         count_matching += 1
     return count_matching
 
 
-def match_from_start_string(regex: list, checked: str) -> bool:
+def match_from_edge_string(regex: list, checked: str, search_direction: SearchDirectionInterface) -> bool:
     match = True
-    checked_ind: int = 0
+    checked_ind: int = search_direction.get_init_index()
     for reg_group in regex:
         regex_char: str
         count_min: int
         count_max: int
         (regex_char, (count_min, count_max)) = reg_group
 
-        current_count: int = count_matching_char_forward(regex_char, checked_ind, checked)
+        current_count: int = count_matching_char(regex_char, checked_ind, checked, search_direction)
         if current_count < count_min:
             match = False
             break
         if current_count > count_max:
             current_count = count_max
-        checked_ind += current_count
+        checked_ind = search_direction.change_counter(checked_ind, current_count)
     return match
 
 
-def match_pure_regex_forward(regex: list, checked: str) -> bool:
-    match: bool = match_from_start_string(regex, checked)  # for empty string
+def match_pure_regex(regex: list, checked: str, search_direction: SearchDirectionInterface) -> bool:
+    match: bool = match_from_edge_string(regex, checked, search_direction)  # for empty string
     start_ind: int
-    for start_ind in range(len(checked)):
-        match = match_from_start_string(regex, checked[start_ind:])
+    for start_ind in search_direction.get_range(0, checked):
+        match = match_from_edge_string(regex, checked[start_ind:], search_direction)
         if match is True:
             break
     return match
@@ -56,7 +84,7 @@ def match_with_meta_start_and_end_string(regex: list, checked: str) -> bool:
     elif is_fixed_end:
         pure_regex = pure_regex[:-1]
         pure_checked = checked[-len(pure_regex):]
-    match = match_from_start_string(pure_regex, pure_checked) if is_equal_match \
+    match = match_from_edge_string(pure_regex, pure_checked) if is_equal_match \
         else match_pure_regex(pure_regex, pure_checked)
     return match
 
@@ -177,8 +205,12 @@ class TestMatchingRegex(unittest.TestCase):
 
     def test_pure_regex(self):
         cases = self.cases_pure_regex + self.cases_pure_regex
-        print('+++++++++++++++++++++++++++++++++++')
-        self.run_case(cases, lambda regex, checked: match_pure_regex_forward(transform_regex(regex), checked))
+        self.run_case(
+            cases,
+            lambda regex, checked: match_pure_regex(
+                transform_regex(regex), checked, SearchForwardDirection()
+            )
+        )
 
     def test_meta_start_and_end_strings(self):
         cases = self.cases_pure_regex + self.cases_pure_regex \
