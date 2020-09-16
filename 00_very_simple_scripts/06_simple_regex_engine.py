@@ -117,15 +117,20 @@ def regex_engine(regex: str, checked: str) -> bool:
     pure_regex: list = transform_regex(regex)
     if is_fixed_start and is_fixed_end:
         pure_regex = pure_regex[1:-1]
-        match = match_from_edge_string(pure_regex, checked, SearchForwardDirection())
+        matched = match_from_edge_string(pure_regex, checked, SearchForwardDirection())
+        # @TODO check by length matched strings
+        match = checked == matched
     elif is_fixed_start:
         pure_regex = pure_regex[1:]
-        match = match_from_edge_string(pure_regex, checked, SearchForwardDirection())
+        matched = match_from_edge_string(pure_regex, checked, SearchForwardDirection())
+        match = matched is not None
     elif is_fixed_end:
         pure_regex = pure_regex[:-1]
-        match = match_from_edge_string(pure_regex, checked, SearchBackwardDirection())
+        matched = match_from_edge_string(pure_regex, checked, SearchBackwardDirection())
+        match = matched is not None
     else:
-        match = match_pure_regex(pure_regex, checked, SearchForwardDirection())
+        matched = match_pure_regex(pure_regex, checked, SearchForwardDirection())
+        match = matched is not None
     return match
 
 
