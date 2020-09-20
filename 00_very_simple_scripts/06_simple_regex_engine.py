@@ -17,7 +17,6 @@ def match_from_start(regex: list, checked: str) -> str:
     match = True
     init_index = 0
     checked_ind: int = init_index
-    # print(f'regex: {regex}')
     for reg_ind in range(len(regex)):
         reg_group: tuple = regex[reg_ind]
         regex_char: str
@@ -31,13 +30,8 @@ def match_from_start(regex: list, checked: str) -> str:
             found_ind = checked.find(next_regex_symbol, checked_ind)
             if found_ind > -1 and found_ind - checked_ind >= count_min:
                 stop_ind = found_ind - 1
-            # print(f'= INNER IF = {len(regex) > (reg_ind + 1)}'
-            #       f' :: {next_regex_symbol} :: {found_ind}')
 
         current_count: int = count_matching_char(regex_char, checked, checked_ind, stop_ind)
-
-        # print(f'{regex_char}  {count_min}  {count_max}  {current_count} '
-        #       f':: {checked_ind} {stop_ind}')
 
         if current_count < count_min:
             match = False
@@ -45,7 +39,6 @@ def match_from_start(regex: list, checked: str) -> str:
         if current_count > count_max:
             current_count = count_max
         checked_ind = checked_ind + current_count
-    # print(f'match_from_edge_string() Return: {match}')
     return checked[init_index:checked_ind] if match else None
 
 
@@ -65,11 +58,14 @@ def regex_engine(regex: str, checked: str) -> str:
     pure_regex: list = transform_regex(regex)
     if is_fixed_start and is_fixed_end:
         pure_regex = pure_regex[1:-1]
+
         matched = match_from_start(pure_regex, checked)
         # reverse strings and regex
         matched_reverse = match_from_start(pure_regex[::-1], checked[::-1])
         # check by length matched strings
-        match = matched if len(matched) == len(matched_reverse) else None
+        is_equality_mathed = matched is not None and matched_reverse is not None and len(matched) == len(
+            matched_reverse)
+        match = matched if is_equality_mathed else None
     elif is_fixed_start:
         pure_regex = pure_regex[1:]
         match = match_from_start(pure_regex, checked)
@@ -218,7 +214,8 @@ class TestMatchingRegex(unittest.TestCase):
 def main():
     input_str = input()
     (regex, checked_str) = input_str.split('|')
-    print(regex_engine(regex, checked_str))
+    matched = regex_engine(regex, checked_str)
+    print(matched is not None)
 
 
 if __name__ == '__main__':
