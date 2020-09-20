@@ -4,69 +4,19 @@ ANY_SYMBOL = 'any_symbol'
 MAX_REPETITION = 99999
 
 
-class SearchDirectionInterface:
-    def change_counter(self, counter: int, value: int) -> int:
-        pass
-
-    def get_range(self, string: str, start: int, stop: int) -> range:
-        pass
-
-    def get_init_index(self, string: str) -> int:
-        pass
-
-    def cut_string(self, string: str, next_symbol: str) -> str:
-        pass
-
-
-class SearchForwardDirection(SearchDirectionInterface):
-    def change_counter(self, counter: int, value: int) -> int:
-        return counter + value
-
-    def get_range(self, string: str, start: int, stop: int) -> range:
-        return range(start, len(string))
-
-    def get_init_index(self, string: str) -> int:
-        return 0
-
-    def cut_string(self, string: str, next_symbol: str) -> str:
-        found_ind = string.find(next_symbol)
-        if found_ind > -1:
-            string = string[:found_ind + 1]
-        return string
-
-
-class SearchBackwardDirection(SearchDirectionInterface):
-    def change_counter(self, counter: int, value: int) -> int:
-        return counter - value
-
-    def get_range(self, string: str, start: int, stop: int) -> range:
-        return range(start, 0 - 1, -1)
-
-    def get_init_index(self, string: str) -> int:
-        return len(string) - 1
-
-    def cut_string(self, string: str, next_symbol: str) -> str:
-        pass
-
-
-def count_matching_char(
-        regex_char: str,
-        checked: str,
-        start_ind: int,
-        stop_ind: int,
-        search_direction: SearchDirectionInterface
-) -> int:
+def count_matching_char(regex_char: str, checked: str, start_ind: int, stop_ind: int) -> int:
     count_matching = 0
-    for i in range(start_ind, stop_ind + 1):  # @todo search_direction.get_range(stop_ind, start_ind, 0):
+    for i in range(start_ind, stop_ind + 1):
         if (regex_char != checked[i]) and (regex_char != ANY_SYMBOL):
             break
         count_matching += 1
     return count_matching
 
 
-def match_from_edge_string(regex: list, checked: str, search_direction: SearchDirectionInterface) -> bool:
+def match_from_start(regex: list, checked: str) -> str:
     match = True
-    checked_ind: int = search_direction.get_init_index(checked)
+    init_index = 0
+    checked_ind: int = init_index
     # print(f'regex: {regex}')
     for reg_ind in range(len(regex)):
         reg_group: tuple = regex[reg_ind]
@@ -84,9 +34,7 @@ def match_from_edge_string(regex: list, checked: str, search_direction: SearchDi
             # print(f'= INNER IF = {len(regex) > (reg_ind + 1)}'
             #       f' :: {next_regex_symbol} :: {found_ind}')
 
-        current_count: int = count_matching_char(
-            regex_char, checked, checked_ind, stop_ind, search_direction
-        )
+        current_count: int = count_matching_char(regex_char, checked, checked_ind, stop_ind)
 
         # print(f'{regex_char}  {count_min}  {count_max}  {current_count} '
         #       f':: {checked_ind} {stop_ind}')
@@ -96,41 +44,41 @@ def match_from_edge_string(regex: list, checked: str, search_direction: SearchDi
             break
         if current_count > count_max:
             current_count = count_max
-        checked_ind = search_direction.change_counter(checked_ind, current_count)
+        checked_ind = checked_ind + current_count
     # print(f'match_from_edge_string() Return: {match}')
-    return match
+    return checked[init_index:checked_ind] if match else None
 
 
-def match_pure_regex(regex: list, checked: str, search_direction: SearchDirectionInterface) -> bool:
-    match: bool = match_from_edge_string(regex, checked, search_direction)  # for empty string
+def match_pure_regex(regex: list, checked: str) -> str:
+    match: str = match_from_start(regex, checked)  # for empty string
     start_ind: int
-    for start_ind in range(0, len(checked)):  # @todo search_direction.get_range(checked, 0, 0):
-        match = match_from_edge_string(regex, checked[start_ind:], search_direction)
-        if match is True:
+    for start_ind in range(0, len(checked)):
+        match = match_from_start(regex, checked[start_ind:])
+        if match is not None:
             break
     return match
 
 
-def regex_engine(regex: str, checked: str) -> bool:
+def regex_engine(regex: str, checked: str) -> str:
     is_fixed_start: bool = regex.startswith('^')
     is_fixed_end: bool = regex.endswith('$')
     pure_regex: list = transform_regex(regex)
     if is_fixed_start and is_fixed_end:
         pure_regex = pure_regex[1:-1]
-        matched = match_from_edge_string(pure_regex, checked, SearchForwardDirection())
-        # @TODO check by length matched strings
-        match = checked == matched
+        matched = match_from_start(pure_regex, checked)
+        # reverse strings and regex
+        matched_reverse = match_from_start(pure_regex[::-1], checked[::-1])
+        # check by length matched strings
+        match = matched if len(matched) == len(matched_reverse) else None
     elif is_fixed_start:
         pure_regex = pure_regex[1:]
-        matched = match_from_edge_string(pure_regex, checked, SearchForwardDirection())
-        match = matched is not None
+        match = match_from_start(pure_regex, checked)
     elif is_fixed_end:
         pure_regex = pure_regex[:-1]
-        matched = match_from_edge_string(pure_regex, checked, SearchBackwardDirection())
-        match = matched is not None
+        matched = match_from_start(pure_regex[::-1], checked[::-1])
+        match = matched[::-1] if matched is not None else None
     else:
-        matched = match_pure_regex(pure_regex, checked, SearchForwardDirection())
-        match = matched is not None
+        match = match_pure_regex(pure_regex, checked)
     return match
 
 
@@ -249,7 +197,8 @@ class TestMatchingRegex(unittest.TestCase):
                 test_str: str
                 expected: bool
                 (regex, test_str, expected,) = case
-                actual = fl(regex, test_str)
+                match = fl(regex, test_str)
+                actual = match is not None
                 # print(f'case: {str(case)}')
                 self.assertEqual(expected, actual, f'case: {str(case)}')
 
@@ -258,9 +207,7 @@ class TestMatchingRegex(unittest.TestCase):
         # cases = self.cases_quantum_only_meta
         self.run_case(
             cases,
-            lambda regex, checked: match_pure_regex(
-                transform_regex(regex), checked, SearchForwardDirection()
-            )
+            lambda regex, checked: match_pure_regex(transform_regex(regex), checked)
         )
 
     def test_regex_engine(self):
