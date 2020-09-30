@@ -1,6 +1,8 @@
 import unittest
 
 ANY_SYMBOL = 'any_symbol'
+START_STRING = 'start_string'
+END_STRING = 'end_string'
 MAX_REPETITION = 99999
 
 
@@ -81,18 +83,36 @@ def regex_engine(regex: str, checked: str) -> str:
 def transform_regex(regex: str) -> list:
     obj: list = []
     ind: int = -1
+    if len(regex) > 0 and regex[0] == '^':
+        obj.append((START_STRING,))
+        ind += 1
+    enable_escaping: bool = False
     while True:
         ind += 1
         if (ind + 1) > len(regex):
             break
         letter: str = regex[ind]
-        if letter == '.':
+
+        # Check fix ending string
+        if not enable_escaping and (ind + 1) == len(regex) and letter == '$':
+            obj.append((END_STRING,))
+            continue
+
+        if not enable_escaping and letter == '\\':
+            enable_escaping = True
+            continue
+        if not enable_escaping and letter == '.':
             letter = ANY_SYMBOL
+
+        if enable_escaping:
+            enable_escaping = False
+
         quantum_letter: str = regex[ind + 1] if (ind + 1) < len(regex) else ''
         if quantum_letter not in ['?', '+', '*', ]:
             quantum_letter = ''
         if quantum_letter:
             ind += 1
+
         quantum = (0, 1,) if quantum_letter == '?' \
             else (1, MAX_REPETITION) if quantum_letter == '+' \
             else (0, MAX_REPETITION) if quantum_letter == '*' \
@@ -117,9 +137,19 @@ class TestTransformRegex(unittest.TestCase):
         ('l.*r', [('l', (1, 1,),), (ANY_SYMBOL, (0, MAX_REPETITION,),), ('r', (1, 1,),), ],),
     ]
 
+    cases_escaping = [
+        ('^\\.$', [(START_STRING,), ('.', (1, 1,)), (END_STRING,), ],),
+        ('\\.$', [('.', (1, 1,)), (END_STRING,), ],),
+        ('3\\+3', [('3', (1, 1,)), ('+', (1, 1,)), ('3', (1, 1,)), ],),
+        ('\\?', [('?', (1, 1,)), ],),
+        ('\\\\', [('\\', (1, 1,)), ],),
+        ('lou\\?r', [('l', (1, 1,),), ('o', (1, 1,),), ('u', (1, 1,),), ('?', (1, 1,),), ('r', (1, 1,),), ]),
+    ]
+
     def test(self) -> None:
         case: tuple
-        for case in self.cases:
+        cases = self.cases + self.cases_escaping
+        for case in cases:
             with self.subTest(case=case):
                 regex: str
                 expected: bool
@@ -185,6 +215,15 @@ class TestMatchingRegex(unittest.TestCase):
         ('col.*r$', 'colors', False,),
     ]
 
+    cases_escaping = [
+        ('\\.$', 'end.', True),
+        ('3\\+3', '3+3=6', True),
+        ('\\?', 'Is this working?', True),
+        ('\\\\', '\\', True),
+        ('colou\\?r', 'color', False),
+        ('colou\\?r', 'colour', False),
+    ]
+
     def run_case(self, cases, fl):
         case: tuple
         for case in cases:
@@ -207,7 +246,7 @@ class TestMatchingRegex(unittest.TestCase):
         )
 
     def test_regex_engine(self):
-        cases = self.cases_pure_regex + self.cases_quantum + self.cases_fixed_start_or_end
+        cases = self.cases_pure_regex + self.cases_quantum + self.cases_fixed_start_or_end + self.cases_escaping
         self.run_case(cases, lambda regex, checked: regex_engine(regex, checked))
 
 
