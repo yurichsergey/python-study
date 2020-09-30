@@ -55,9 +55,11 @@ def match_pure_regex(regex: list, checked: str) -> str:
 
 
 def regex_engine(regex: str, checked: str) -> str:
-    is_fixed_start: bool = regex.startswith('^')
-    is_fixed_end: bool = regex.endswith('$')
     pure_regex: list = transform_regex(regex)
+
+    is_fixed_start: bool = pure_regex[0] == (START_STRING,) if len(pure_regex) > 0 else False
+    is_fixed_end: bool = pure_regex[-1] == (END_STRING,) if len(pure_regex) > 0 else False
+
     if is_fixed_start and is_fixed_end:
         pure_regex = pure_regex[1:-1]
 
