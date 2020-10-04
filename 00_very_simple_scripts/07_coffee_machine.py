@@ -56,7 +56,7 @@ class CoffeeMachine:
         print(f'{self.__milk} of milk')
         print(f'{self.__beans} of coffee beans')
         print(f'{self.__disposable_cups} of disposable cups')
-        print(f'{self.__money} of money')
+        print(f'${self.__money} of money')
 
     def make_coffee(self, recipe: CoffeeTypeRecipe) -> None:
         self.__water -= recipe.get_water()
@@ -69,6 +69,16 @@ class CoffeeMachine:
         took_money: int = self.__money if self.__money > 0 else 0
         self.__money -= took_money
         return took_money
+
+    def get_not_enough_resources(self, recipe: CoffeeTypeRecipe) -> list:
+        not_enough_resources = []
+        if recipe.get_water() > self.__water:
+            not_enough_resources.append('water')
+        if recipe.get_milk() > self.__milk:
+            not_enough_resources.append('milk')
+        if recipe.get_beans() > self.__beans:
+            not_enough_resources.append('bean')
+        return not_enough_resources
 
 
 def init_machine(machine: CoffeeMachine) -> None:
@@ -87,47 +97,26 @@ class CoffeeTypeFactory:
         return CoffeeTypeRecipe(water=200, milk=100, beans=12, cost=6)
 
 
-#
-# water_one_cup: int = 200  # ml of water
-# milk_one_cup: int = 50  # ml of milk
-# beans_one_cup: int = 15  # g of coffee beans.
-#
-# water_has: int = int(input(f'Write how many ml of water the coffee machine has:'))
-# milk_has: int = int(input(f'Write how many ml of milk the coffee machine has:'))
-# beans_have: int = int(input(f'Write how many grams of coffee beans the coffee machine has:'))
-# cups_need: int = int(input(f'Write how many cups of coffee you will need:'))
-#
-# water_needs: int = cups_need * water_one_cup
-# milk_needs: int = cups_need * milk_one_cup
-# beans_need: int = cups_need * beans_one_cup
-#
-# # print(f'For {cups_need} cups of coffee you will need:')
-# # print(f'{water_needs} ml of water')
-# # print(f'{milk_needs} ml of milk')
-# # print(f'{beans_need} g of coffee beans')
-#
-# cups_by_water_allow: int = water_has // water_one_cup
-# cups_by_milk_allow: int = milk_has // milk_one_cup
-# cups_by_beans_allow: int = beans_have // beans_one_cup
-# cups_result_allow: int = min([cups_by_water_allow, cups_by_milk_allow, cups_by_beans_allow, ])
-#
-# if cups_need <= cups_result_allow:
-#     cups_reminder: int = cups_result_allow - cups_need
-#     additional_info: str = f' (and even {cups_reminder} more than that)' if cups_reminder > 0 else ''
-#     print(f'Yes, I can make that amount of coffee' + additional_info)
-# else:
-#     print(f'No, I can make only {cups_result_allow} cups of coffee')
-
-
 def action_buy(machine: CoffeeMachine) -> None:
     type_factory = CoffeeTypeFactory()
     coffee_type_storage = {
-        1: type_factory.create_espresso(),
-        2: type_factory.create_latte(),
-        3: type_factory.create_cappuccino()
+        '1': type_factory.create_espresso(),
+        '2': type_factory.create_latte(),
+        '3': type_factory.create_cappuccino(),
+        'back': None
     }
-    coffee_type_id = int(input('What do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino:'))
+    coffee_type_id = input('What do you want to buy?'
+                           ' 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:')
     coffee_type = coffee_type_storage[coffee_type_id]
+    if not coffee_type:
+        return  # back to main menu
+    not_enough_resources = machine.get_not_enough_resources(coffee_type)
+    if not_enough_resources:
+        print('Sorry, not enough ' + ', '.join(not_enough_resources) + '!')
+        # for resource in not_enough_resources:
+        #     print(f'Sorry, not enough {resource}!')
+        return
+    print('I have enough resources, making you a coffee!')
     machine.make_coffee(coffee_type)
 
 
@@ -146,18 +135,21 @@ def action_take(machine: CoffeeMachine) -> None:
 def main():
     machine: CoffeeMachine = CoffeeMachine()
     init_machine(machine)
-    machine.print_state()
 
-    action: str = input('Write action (buy, fill, take):')
-    if action == 'buy':
-        action_buy(machine)
-    elif action == 'fill':
-        action_fill(machine)
-    elif action == 'take':
-        action_take(machine)
-    else:
-        print('Unknown action')
-    machine.print_state()
+    while True:
+        action: str = input('Write action (buy, fill, take, remaining, exit):')
+        if action == 'buy':
+            action_buy(machine)
+        elif action == 'fill':
+            action_fill(machine)
+        elif action == 'take':
+            action_take(machine)
+        elif action == 'remaining':
+            machine.print_state()
+        elif action == 'exit':
+            break
+        else:
+            print('Unknown action')
 
 
 main()
