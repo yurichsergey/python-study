@@ -81,10 +81,6 @@ class CoffeeMachine:
         return not_enough_resources
 
 
-def init_machine(machine: CoffeeMachine) -> None:
-    machine.fill_state(water=400, milk=540, beans=120, disposable_cups=9, money=550)
-
-
 class CoffeeTypeFactory:
 
     def create_espresso(self) -> CoffeeTypeRecipe:
@@ -97,53 +93,57 @@ class CoffeeTypeFactory:
         return CoffeeTypeRecipe(water=200, milk=100, beans=12, cost=6)
 
 
-def action_buy(machine: CoffeeMachine) -> None:
-    type_factory = CoffeeTypeFactory()
-    coffee_type_storage = {
-        '1': type_factory.create_espresso(),
-        '2': type_factory.create_latte(),
-        '3': type_factory.create_cappuccino(),
-        'back': None
-    }
-    coffee_type_id = input('What do you want to buy?'
-                           ' 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:')
-    coffee_type = coffee_type_storage[coffee_type_id]
-    if not coffee_type:
-        return  # back to main menu
-    not_enough_resources = machine.get_not_enough_resources(coffee_type)
-    if not_enough_resources:
-        print('Sorry, not enough ' + ', '.join(not_enough_resources) + '!')
-        # for resource in not_enough_resources:
-        #     print(f'Sorry, not enough {resource}!')
-        return
-    print('I have enough resources, making you a coffee!')
-    machine.make_coffee(coffee_type)
+class CoffeeMachineActions:
 
+    def __init__(self, machine: CoffeeMachine):
+        self.__machine = machine
 
-def action_fill(machine: CoffeeMachine) -> None:
-    water: int = int(input(f'Write how many ml of water do you want to add:'))
-    milk: int = int(input(f'Write how many ml of milk do you want to add:'))
-    beans: int = int(input(f'Write how many grams of coffee beans do you want to add:'))
-    cups: int = int(input(f'Write how many disposable cups of coffee do you want to add:'))
-    machine.fill_state(water=water, milk=milk, beans=beans, disposable_cups=cups, money=0)
+    def action_buy(self) -> None:
+        type_factory = CoffeeTypeFactory()
+        coffee_type_storage = {
+            '1': type_factory.create_espresso(),
+            '2': type_factory.create_latte(),
+            '3': type_factory.create_cappuccino(),
+            'back': None
+        }
+        coffee_type_id = input('What do you want to buy?'
+                               ' 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:')
+        coffee_type = coffee_type_storage[coffee_type_id]
+        if not coffee_type:
+            return  # back to main menu
+        not_enough_resources = self.__machine.get_not_enough_resources(coffee_type)
+        if not_enough_resources:
+            print('Sorry, not enough ' + ', '.join(not_enough_resources) + '!')
+            # for resource in not_enough_resources:
+            #     print(f'Sorry, not enough {resource}!')
+            return
+        print('I have enough resources, making you a coffee!')
+        self.__machine.make_coffee(coffee_type)
 
+    def action_fill(self) -> None:
+        water: int = int(input(f'Write how many ml of water do you want to add:'))
+        milk: int = int(input(f'Write how many ml of milk do you want to add:'))
+        beans: int = int(input(f'Write how many grams of coffee beans do you want to add:'))
+        cups: int = int(input(f'Write how many disposable cups of coffee do you want to add:'))
+        self.__machine.fill_state(water=water, milk=milk, beans=beans, disposable_cups=cups, money=0)
 
-def action_take(machine: CoffeeMachine) -> None:
-    print(f'I gave you ${machine.take_money()}')
+    def action_take(self) -> None:
+        print(f'I gave you ${self.__machine.take_money()}')
 
 
 def main():
     machine: CoffeeMachine = CoffeeMachine()
-    init_machine(machine)
+    machine.fill_state(water=400, milk=540, beans=120, disposable_cups=9, money=550)
+    actions = CoffeeMachineActions(machine)
 
     while True:
         action: str = input('Write action (buy, fill, take, remaining, exit):')
         if action == 'buy':
-            action_buy(machine)
+            actions.action_buy()
         elif action == 'fill':
-            action_fill(machine)
+            actions.action_fill()
         elif action == 'take':
-            action_take(machine)
+            actions.action_take()
         elif action == 'remaining':
             machine.print_state()
         elif action == 'exit':
