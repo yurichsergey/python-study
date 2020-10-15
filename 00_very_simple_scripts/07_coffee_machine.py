@@ -116,6 +116,9 @@ class ActionInterface:
     def greeting(self) -> str:
         return ''
 
+    def interrupt_flow(self) -> bool:
+        return False
+
 
 class ActionChooseAction(ActionInterface):
     def __init__(self, machine: CoffeeMachine):
@@ -134,7 +137,7 @@ class ActionChooseAction(ActionInterface):
         elif data == 'remaining':
             return ActionPrintState(self.__machine, self).action()
         elif data == 'exit':
-            exit(0)
+            return ActionExit()
         else:
             print(f'Unknown action: "{data}"')
 
@@ -227,26 +230,46 @@ class ActionPrintState(ActionInterface):
         return self.__action
 
 
-# class CoffeeMachineConsoleInterface:
-#
-#     def __init__(self, actions: CoffeeMachineActions):
-#         self.actions = actions
-#         self.current_state =
-#
-#     def take_command(self, command: str) -> bool:
+class ActionExit(ActionInterface):
+
+    def interrupt_flow(self) -> bool:
+        return True
+
+
+class OutputFormat:
+
+    def __init__(self, output_str: str, action: ActionInterface):
+        self.__output_str: str = output_str
+        self.__action: ActionInterface = action
+
+    def get_output_str(self) -> str:
+        return self.__output_str
+
+    def get_action(self) -> ActionInterface:
+        return self.__action
+
+
+class CoffeeMachineConsole:
+
+    def __init__(self, machine: CoffeeMachine):
+        self.__machine: CoffeeMachine = machine
+
+    def work(self) -> None:
+        action = ActionChooseAction(self.__machine)
+        while True:
+            if action.interrupt_flow():
+                return  # exit
+            greeting = action.greeting()
+            if greeting:
+                print(greeting)
+            input_data: str = input()
+            action = action.action(input_data)
 
 
 def main():
     machine: CoffeeMachine = CoffeeMachine()
     machine.fill_state(water=400, milk=540, beans=120, disposable_cups=9, money=550)
-    action = ActionChooseAction(machine)
-
-    while True:
-        greeting = action.greeting()
-        if greeting:
-            print(greeting)
-        input_data: str = input()
-        action = action.action(input_data)
+    CoffeeMachineConsole(machine).work()
 
 
 main()
