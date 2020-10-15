@@ -66,11 +66,11 @@ class CoffeeMachine:
         self.__money += money
 
     def print_state(self) -> str:
-        return f'The coffee machine has:' \
-               + f'{self.__water} of water' \
-               + f'{self.__milk} of milk' \
-               + f'{self.__beans} of coffee beans' \
-               + f'{self.__disposable_cups} of disposable cups' \
+        return f'The coffee machine has:\n' \
+               + f'{self.__water} of water\n' \
+               + f'{self.__milk} of milk\n' \
+               + f'{self.__beans} of coffee beans\n' \
+               + f'{self.__disposable_cups} of disposable cups\n' \
                + f'${self.__money} of money'
 
     def make_coffee(self, recipe: CoffeeTypeRecipe) -> None:
