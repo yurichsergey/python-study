@@ -114,7 +114,7 @@ class ActionInterface:
         pass
 
     def greeting(self) -> str:
-        pass
+        return ''
 
 
 class ActionChooseAction(ActionInterface):
@@ -122,7 +122,7 @@ class ActionChooseAction(ActionInterface):
         self.__machine: CoffeeMachine = machine
 
     def greeting(self) -> str:
-        return 'Write action (buy, fill, take, remaining, exit):'
+        return '\nWrite action (buy, fill, take, remaining, exit):'
 
     def action(self, data: str) -> 'ActionInterface':
         if data == 'buy':
@@ -148,7 +148,7 @@ class ActionBuy(ActionInterface):
         self.__machine = machine
 
     def greeting(self) -> str:
-        return 'What do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:'
+        return '\nWhat do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:'
 
     def action(self, data: str) -> 'ActionInterface':
         type_factory = CoffeeTypeFactory()
@@ -190,7 +190,7 @@ class ActionFill(ActionInterface):
         greeting: str
         action: callable
         greeting, action = self.__ingredients[self.__current_ingredient]
-        return greeting
+        return ('\n' if self.__current_ingredient == 0 else '') + greeting
 
     def action(self, data: str) -> 'ActionInterface':
         greeting: str
@@ -212,7 +212,7 @@ class ActionTake(ActionInterface):
         self.__machine = machine
 
     def action(self, data: str) -> 'ActionInterface':
-        print(f'I gave you ${self.__machine.take_money()}')
+        print(f'\nI gave you ${self.__machine.take_money()}')
         return self.__action
 
 
@@ -223,7 +223,7 @@ class ActionPrintState(ActionInterface):
         self.__machine = machine
 
     def action(self, data: str) -> 'ActionInterface':
-        print(self.__machine.print_state())
+        print('\n' + self.__machine.print_state())
         return self.__action
 
 
@@ -245,7 +245,8 @@ def main():
         greeting = action.greeting()
         if greeting:
             print(greeting)
-        action = action.action(input())
+        input_data: str = input()
+        action = action.action(input_data)
 
 
 main()
