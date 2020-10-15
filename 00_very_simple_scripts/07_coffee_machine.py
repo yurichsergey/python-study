@@ -189,7 +189,7 @@ class ActionFill(ActionInterface):
         greeting: str
         action: callable
         greeting, action = self.__ingredients[self.__current_ingredient]
-        return ('\n' if self.__current_ingredient == 0 else '') + greeting
+        return greeting
 
     def action(self, data: str = '') -> 'OutputFormat':
         greeting: str
@@ -211,7 +211,7 @@ class ActionTake(ActionInterface):
         self.__machine = machine
 
     def action(self, data: str = '') -> 'OutputFormat':
-        return OutputFormat(f'\nI gave you ${self.__machine.take_money()}', self.__action)
+        return OutputFormat(f'I gave you ${self.__machine.take_money()}', self.__action)
 
 
 class ActionPrintState(ActionInterface):
@@ -221,7 +221,7 @@ class ActionPrintState(ActionInterface):
         self.__machine = machine
 
     def action(self, data: str = '') -> 'OutputFormat':
-        return OutputFormat('\n' + self.__machine.print_state(), self.__action)
+        return OutputFormat(self.__machine.print_state(), self.__action)
 
 
 class ActionExit(ActionInterface):
