@@ -110,7 +110,7 @@ class CoffeeTypeFactory:
 
 class ActionInterface:
 
-    def action(self, data: str = '') -> 'ActionInterface':
+    def action(self, data: str = '') -> 'OutputFormat':
         pass
 
     def greeting(self) -> str:
@@ -127,21 +127,21 @@ class ActionChooseAction(ActionInterface):
     def greeting(self) -> str:
         return '\nWrite action (buy, fill, take, remaining, exit):'
 
-    def action(self, data: str = '') -> 'ActionInterface':
+    def action(self, data: str = '') -> 'OutputFormat':
         if data == 'buy':
-            return ActionBuy(self.__machine, self)
+            return OutputFormat('', ActionBuy(self.__machine, self))
         elif data == 'fill':
-            return ActionFill(self.__machine, self)
+            return OutputFormat('', ActionFill(self.__machine, self))
         elif data == 'take':
             return ActionTake(self.__machine, self).action()
         elif data == 'remaining':
             return ActionPrintState(self.__machine, self).action()
         elif data == 'exit':
-            return ActionExit()
+            return OutputFormat('', ActionExit())
         else:
-            print(f'Unknown action: "{data}"')
+            OutputFormat(f'Unknown action: "{data}"', self)
 
-        return self
+        return OutputFormat('', self)
 
 
 class ActionBuy(ActionInterface):
@@ -153,7 +153,7 @@ class ActionBuy(ActionInterface):
     def greeting(self) -> str:
         return '\nWhat do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:'
 
-    def action(self, data: str = '') -> 'ActionInterface':
+    def action(self, data: str = '') -> 'OutputFormat':
         type_factory = CoffeeTypeFactory()
         coffee_type_storage = {
             '1': type_factory.create_espresso(),
@@ -164,16 +164,12 @@ class ActionBuy(ActionInterface):
         coffee_type_id: str = data
         coffee_type: CoffeeTypeRecipe = coffee_type_storage[coffee_type_id]
         if not coffee_type:
-            return self.__action  # back to main menu
+            return OutputFormat('', self.__action)  # back to main menu
         not_enough_resources = self.__machine.get_not_enough_resources(coffee_type)
         if not_enough_resources:
-            print('Sorry, not enough ' + ', '.join(not_enough_resources) + '!')
-            # for resource in not_enough_resources:
-            #     print(f'Sorry, not enough {resource}!')
-            return self.__action
-        print('I have enough resources, making you a coffee!')
+            return OutputFormat('Sorry, not enough ' + ', '.join(not_enough_resources) + '!', self.__action)
         self.__machine.make_coffee(coffee_type)
-        return self.__action
+        return OutputFormat('I have enough resources, making you a coffee!', self.__action)
 
 
 class ActionFill(ActionInterface):
@@ -195,17 +191,17 @@ class ActionFill(ActionInterface):
         greeting, action = self.__ingredients[self.__current_ingredient]
         return ('\n' if self.__current_ingredient == 0 else '') + greeting
 
-    def action(self, data: str = '') -> 'ActionInterface':
+    def action(self, data: str = '') -> 'OutputFormat':
         greeting: str
         action: callable
         greeting, action = self.__ingredients[self.__current_ingredient]
         action(int(data))
         if self.__current_ingredient < (len(self.__ingredients) - 1):
             self.__current_ingredient += 1
-            return self
+            return OutputFormat('', self)
         else:
             self.__current_ingredient = 0
-            return self.__action
+            return OutputFormat('', self.__action)
 
 
 class ActionTake(ActionInterface):
@@ -214,9 +210,8 @@ class ActionTake(ActionInterface):
         self.__action = action
         self.__machine = machine
 
-    def action(self, data: str = '') -> 'ActionInterface':
-        print(f'\nI gave you ${self.__machine.take_money()}')
-        return self.__action
+    def action(self, data: str = '') -> 'OutputFormat':
+        return OutputFormat(f'\nI gave you ${self.__machine.take_money()}', self.__action)
 
 
 class ActionPrintState(ActionInterface):
@@ -225,9 +220,8 @@ class ActionPrintState(ActionInterface):
         self.__action = action
         self.__machine = machine
 
-    def action(self, data: str = '') -> 'ActionInterface':
-        print('\n' + self.__machine.print_state())
-        return self.__action
+    def action(self, data: str = '') -> 'OutputFormat':
+        return OutputFormat('\n' + self.__machine.print_state(), self.__action)
 
 
 class ActionExit(ActionInterface):
@@ -255,15 +249,17 @@ class CoffeeMachineConsole:
         self.__machine: CoffeeMachine = machine
 
     def work(self) -> None:
-        action = ActionChooseAction(self.__machine)
+        action: ActionInterface = ActionChooseAction(self.__machine)
         while True:
             if action.interrupt_flow():
                 return  # exit
-            greeting = action.greeting()
-            if greeting:
-                print(greeting)
+            if action.greeting():
+                print(action.greeting())
             input_data: str = input()
-            action = action.action(input_data)
+            output: OutputFormat = action.action(input_data)
+            if output.get_output_str():
+                print(output.get_output_str())
+            action = output.get_action()
 
 
 def main():
