@@ -50,13 +50,28 @@ class CoffeeMachine:
         self.__disposable_cups += disposable_cups
         self.__money += money
 
-    def print_state(self) -> None:
-        print(f'The coffee machine has:')
-        print(f'{self.__water} of water')
-        print(f'{self.__milk} of milk')
-        print(f'{self.__beans} of coffee beans')
-        print(f'{self.__disposable_cups} of disposable cups')
-        print(f'${self.__money} of money')
+    def fill_water(self, water: int):
+        self.__water += water
+
+    def fill_milk(self, milk: int):
+        self.__milk += milk
+
+    def fill_beans(self, beans: int):
+        self.__beans += beans
+
+    def fill_disposable_cups(self, disposable_cups: int):
+        self.__disposable_cups += disposable_cups
+
+    def fill_money(self, money: int):
+        self.__money += money
+
+    def print_state(self) -> str:
+        return f'The coffee machine has:' \
+               + f'{self.__water} of water' \
+               + f'{self.__milk} of milk' \
+               + f'{self.__beans} of coffee beans' \
+               + f'{self.__disposable_cups} of disposable cups' \
+               + f'${self.__money} of money'
 
     def make_coffee(self, recipe: CoffeeTypeRecipe) -> None:
         self.__water -= recipe.get_water()
@@ -93,12 +108,49 @@ class CoffeeTypeFactory:
         return CoffeeTypeRecipe(water=200, milk=100, beans=12, cost=6)
 
 
-class CoffeeMachineActions:
+class ActionInterface:
 
+    def action(self, data: str) -> 'ActionInterface':
+        pass
+
+    def greeting(self) -> str:
+        pass
+
+
+class ActionChooseAction(ActionInterface):
     def __init__(self, machine: CoffeeMachine):
+        self.__machine: CoffeeMachine = machine
+
+    def greeting(self) -> str:
+        return 'Write action (buy, fill, take, remaining, exit):'
+
+    def action(self, data: str) -> 'ActionInterface':
+        if data == 'buy':
+            return ActionBuy(self.__machine, self)
+        elif data == 'fill':
+            return ActionFill(self.__machine, self)
+        elif data == 'take':
+            return ActionTake(self.__machine, self)
+        elif data == 'remaining':
+            return ActionPrintState(self.__machine, self)
+        elif data == 'exit':
+            exit(0)
+        else:
+            print(f'Unknown action: "{data}"')
+
+        return self
+
+
+class ActionBuy(ActionInterface):
+
+    def __init__(self, machine: CoffeeMachine, action: ActionInterface):
+        self.__action = action
         self.__machine = machine
 
-    def action_buy(self) -> None:
+    def greeting(self) -> str:
+        return 'What do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:'
+
+    def action(self, data: str) -> 'ActionInterface':
         type_factory = CoffeeTypeFactory()
         coffee_type_storage = {
             '1': type_factory.create_espresso(),
@@ -106,50 +158,94 @@ class CoffeeMachineActions:
             '3': type_factory.create_cappuccino(),
             'back': None
         }
-        coffee_type_id = input('What do you want to buy?'
-                               ' 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:')
-        coffee_type = coffee_type_storage[coffee_type_id]
+        coffee_type_id: str = data
+        coffee_type: CoffeeTypeRecipe = coffee_type_storage[coffee_type_id]
         if not coffee_type:
-            return  # back to main menu
+            return self.__action  # back to main menu
         not_enough_resources = self.__machine.get_not_enough_resources(coffee_type)
         if not_enough_resources:
             print('Sorry, not enough ' + ', '.join(not_enough_resources) + '!')
             # for resource in not_enough_resources:
             #     print(f'Sorry, not enough {resource}!')
-            return
+            return self.__action
         print('I have enough resources, making you a coffee!')
         self.__machine.make_coffee(coffee_type)
+        return self.__action
 
-    def action_fill(self) -> None:
-        water: int = int(input(f'Write how many ml of water do you want to add:'))
-        milk: int = int(input(f'Write how many ml of milk do you want to add:'))
-        beans: int = int(input(f'Write how many grams of coffee beans do you want to add:'))
-        cups: int = int(input(f'Write how many disposable cups of coffee do you want to add:'))
-        self.__machine.fill_state(water=water, milk=milk, beans=beans, disposable_cups=cups, money=0)
 
-    def action_take(self) -> None:
+class ActionFill(ActionInterface):
+
+    def __init__(self, machine: CoffeeMachine, action: ActionInterface):
+        self.__action = action
+        self.__machine = machine
+        self.__ingredients = [
+            (f'Write how many ml of water do you want to add:', self.__machine.fill_water,),
+            (f'Write how many ml of milk do you want to add:', self.__machine.fill_milk,),
+            (f'Write how many grams of coffee beans do you want to add:', self.__machine.fill_beans,),
+            (f'Write how many disposable cups of coffee do you want to add:', self.__machine.fill_disposable_cups,),
+        ]
+        self.__current_ingredient = 0
+
+    def greeting(self) -> str:
+        greeting: str
+        action: callable
+        greeting, action = self.__ingredients[self.__current_ingredient]
+        return greeting
+
+    def action(self, data: str) -> 'ActionInterface':
+        greeting: str
+        action: callable
+        greeting, action = self.__ingredients[self.__current_ingredient]
+        action(int(data))
+        if self.__current_ingredient < (len(self.__ingredients) - 1):
+            self.__current_ingredient += 1
+            return self
+        else:
+            self.__current_ingredient = 0
+            return self.__action
+
+
+class ActionTake(ActionInterface):
+
+    def __init__(self, machine: CoffeeMachine, action: ActionInterface):
+        self.__action = action
+        self.__machine = machine
+
+    def action(self, data: str) -> 'ActionInterface':
         print(f'I gave you ${self.__machine.take_money()}')
+        return self.__action
+
+
+class ActionPrintState(ActionInterface):
+
+    def __init__(self, machine: CoffeeMachine, action: ActionInterface):
+        self.__action = action
+        self.__machine = machine
+
+    def action(self, data: str) -> 'ActionInterface':
+        print(self.__machine.print_state())
+        return self.__action
+
+
+# class CoffeeMachineConsoleInterface:
+#
+#     def __init__(self, actions: CoffeeMachineActions):
+#         self.actions = actions
+#         self.current_state =
+#
+#     def take_command(self, command: str) -> bool:
 
 
 def main():
     machine: CoffeeMachine = CoffeeMachine()
     machine.fill_state(water=400, milk=540, beans=120, disposable_cups=9, money=550)
-    actions = CoffeeMachineActions(machine)
+    action = ActionChooseAction(machine)
 
     while True:
-        action: str = input('Write action (buy, fill, take, remaining, exit):')
-        if action == 'buy':
-            actions.action_buy()
-        elif action == 'fill':
-            actions.action_fill()
-        elif action == 'take':
-            actions.action_take()
-        elif action == 'remaining':
-            machine.print_state()
-        elif action == 'exit':
-            break
-        else:
-            print('Unknown action')
+        greeting = action.greeting()
+        if greeting:
+            print(greeting)
+        action = action.action(input())
 
 
 main()
