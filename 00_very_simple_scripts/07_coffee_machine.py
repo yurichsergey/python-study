@@ -110,7 +110,7 @@ class CoffeeTypeFactory:
 
 class ActionInterface:
 
-    def action(self, data: str) -> 'ActionInterface':
+    def action(self, data: str = '') -> 'ActionInterface':
         pass
 
     def greeting(self) -> str:
@@ -124,15 +124,15 @@ class ActionChooseAction(ActionInterface):
     def greeting(self) -> str:
         return '\nWrite action (buy, fill, take, remaining, exit):'
 
-    def action(self, data: str) -> 'ActionInterface':
+    def action(self, data: str = '') -> 'ActionInterface':
         if data == 'buy':
             return ActionBuy(self.__machine, self)
         elif data == 'fill':
             return ActionFill(self.__machine, self)
         elif data == 'take':
-            return ActionTake(self.__machine, self)
+            return ActionTake(self.__machine, self).action()
         elif data == 'remaining':
-            return ActionPrintState(self.__machine, self)
+            return ActionPrintState(self.__machine, self).action()
         elif data == 'exit':
             exit(0)
         else:
@@ -150,7 +150,7 @@ class ActionBuy(ActionInterface):
     def greeting(self) -> str:
         return '\nWhat do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino, back - to main menu:'
 
-    def action(self, data: str) -> 'ActionInterface':
+    def action(self, data: str = '') -> 'ActionInterface':
         type_factory = CoffeeTypeFactory()
         coffee_type_storage = {
             '1': type_factory.create_espresso(),
@@ -192,7 +192,7 @@ class ActionFill(ActionInterface):
         greeting, action = self.__ingredients[self.__current_ingredient]
         return ('\n' if self.__current_ingredient == 0 else '') + greeting
 
-    def action(self, data: str) -> 'ActionInterface':
+    def action(self, data: str = '') -> 'ActionInterface':
         greeting: str
         action: callable
         greeting, action = self.__ingredients[self.__current_ingredient]
@@ -211,7 +211,7 @@ class ActionTake(ActionInterface):
         self.__action = action
         self.__machine = machine
 
-    def action(self, data: str) -> 'ActionInterface':
+    def action(self, data: str = '') -> 'ActionInterface':
         print(f'\nI gave you ${self.__machine.take_money()}')
         return self.__action
 
@@ -222,7 +222,7 @@ class ActionPrintState(ActionInterface):
         self.__action = action
         self.__machine = machine
 
-    def action(self, data: str) -> 'ActionInterface':
+    def action(self, data: str = '') -> 'ActionInterface':
         print('\n' + self.__machine.print_state())
         return self.__action
 
