@@ -1,5 +1,5 @@
 """
-The decision for very hard task from hyperskill.
+The decision for very hard task from mini_projects.
 I decided it with test-driven development (TDD).
 Without TDD, I or couldn't decide or could decide it very long time.
 And of course with understanding of Conversion to boolean in Python.
