@@ -12,21 +12,36 @@ class RockPaperScissorsEngine:
         SCISSORS: ROCK
     }
 
-    def engine(self, player_choose: str) -> str:
-        computer_choose = random.choice(list(self.won_steps))
-        if player_choose == computer_choose:
-            answer = f'There is a draw ({player_choose})'
-        elif self.won_steps[player_choose] != computer_choose:
-            answer = f'Well done. The computer chose {computer_choose} and failed'
+    valid_steps = list(won_steps)
+
+    def is_valid_choice(self, choice: str) -> bool:
+        return choice in self.valid_steps
+
+    def action(self, player_choice: str) -> str:
+        if not self.is_valid_choice(player_choice):
+            return 'Invalid input'
+        computer_choice = random.choice(self.valid_steps)
+        if player_choice == computer_choice:
+            answer = f'There is a draw ({player_choice})'
+        elif self.won_steps[player_choice] != computer_choice:
+            answer = f'Well done. The computer chose {computer_choice} and failed'
         else:
-            answer = f'Sorry, but the computer chose {computer_choose}'
+            answer = f'Sorry, but the computer chose {computer_choice}'
         return answer
 
 
 def main():
-    player_choose = input()
-    answer = RockPaperScissorsEngine().engine(player_choose)
-    print(answer)
+    engine = RockPaperScissorsEngine()
+    while True:
+        player_choice = input()
+        if player_choice == '!exit':
+            print('Bye!')
+            break
+        if not engine.is_valid_choice(player_choice):
+            print('Invalid input')
+            continue
+        answer = engine.action(player_choice)
+        print(answer)
 
 
 main()
