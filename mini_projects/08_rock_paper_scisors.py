@@ -59,7 +59,7 @@ class RatingsStorage:
         storage = {}
         f = open(self.filename, 'rt')
         for line in f.readlines():
-            line_name, line_score = line.split(' ')
+            line_name, line_score = line.strip().split(' ')
             storage[line_name] = int(line_score)
         f.close()
         return storage
@@ -74,7 +74,7 @@ class RatingsStorage:
         if name not in storage:
             storage[name] = 0
         storage[name] += score
-        f.writelines([k + ' ' + str(storage[k]) for k in storage])
+        f.writelines([k + ' ' + str(storage[k]) + '\n' for k in storage])
         f.close()
 
 
