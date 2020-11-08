@@ -1,4 +1,5 @@
 import random
+import os.path
 
 
 class AnswerStep:
@@ -43,7 +44,45 @@ class RockPaperScissorsEngine:
         return answer
 
 
+class RatingsStorage:
+
+    def __init__(self, filename: str):
+        self.filename = filename
+
+    def read_score(self, name: str) -> int:
+        if not os.path.exists(self.filename):
+            return 0
+        storage = self.__read_from_storage()
+        return storage[name] if name in storage else 0
+
+    def __read_from_storage(self):
+        storage = {}
+        f = open(self.filename, 'rt')
+        for line in f.readlines():
+            line_name, line_score = line.split(' ')
+            storage[line_name] = int(line_score)
+        f.close()
+        return storage
+
+    def write_score(self, name: str, score: int) -> None:
+        if os.path.exists(self.filename):
+            storage = self.__read_from_storage()
+        else:
+            storage = {}
+
+        f = open(self.filename, 'wt')
+        if name not in storage:
+            storage[name] = 0
+        storage[name] += score
+        f.writelines([k + ' ' + str(storage[k]) for k in storage])
+        f.close()
+
+
 def main():
+    name = input('Enter your name:')
+    print(f'Hello, {name}')
+    rating_storage = RatingsStorage('rating.txt')
+
     engine = RockPaperScissorsEngine()
     while True:
         player_choice = input()
@@ -51,12 +90,13 @@ def main():
             print('Bye!')
             break
         if player_choice == '!rating':
-            print('Bye!')
+            print(f'Your rating: {rating_storage.read_score(name)}')
             continue
         if not engine.is_valid_choice(player_choice):
             print('Invalid input')
             continue
         answer = engine.action(player_choice)
+        rating_storage.write_score(name, answer.get_player_score())
         print(answer.get_result_str())
 
 
