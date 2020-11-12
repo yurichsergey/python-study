@@ -21,9 +21,9 @@ class RockPaperScissorsEngine:
     SCISSORS = 'scissors'
 
     won_steps = {
-        PAPER: SCISSORS,
-        ROCK: PAPER,
-        SCISSORS: ROCK
+        PAPER: [SCISSORS],
+        ROCK: [PAPER],
+        SCISSORS: [ROCK],
     }
 
     valid_steps = list(won_steps)
@@ -37,7 +37,7 @@ class RockPaperScissorsEngine:
         computer_choice = random.choice(self.valid_steps)
         if player_choice == computer_choice:
             answer = AnswerStep(50, f'There is a draw ({player_choice})')
-        elif self.won_steps[player_choice] != computer_choice:
+        elif computer_choice not in self.won_steps[player_choice]:
             answer = AnswerStep(100, f'Well done. The computer chose {computer_choice} and failed')
         else:
             answer = AnswerStep(0, f'Sorry, but the computer chose {computer_choice}')
