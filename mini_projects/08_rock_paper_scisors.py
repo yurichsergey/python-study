@@ -1,5 +1,5 @@
-import random
 import os.path
+import random
 
 
 class AnswerStep:
@@ -15,29 +15,69 @@ class AnswerStep:
         return self.result_str
 
 
-class RockPaperScissorsEngine:
-    PAPER = 'paper'
-    ROCK = 'rock'
-    SCISSORS = 'scissors'
+class StepsMapCreator:
 
-    won_steps = {
-        PAPER: [SCISSORS],
-        ROCK: [PAPER],
-        SCISSORS: [ROCK],
-    }
+    # won_steps = {
+    #     PAPER: [SCISSORS],
+    #     ROCK: [PAPER],
+    #     SCISSORS: [ROCK],
+    # }
 
-    valid_steps = list(won_steps)
+    @staticmethod
+    def create_map(choices: list) -> dict:
+        steps_map = {x: [] for x in choices}
+        size = len(choices)
+        won_size = size // 2
+        # step:str
+        for step in steps_map:
+            for i in range(won_size):
+
+                found_step: str = ''
+                for y in choices:
+                    if y == step:
+                        continue
+                    if step in steps_map[y]:
+                        continue
+                    found_step = y
+                    break
+
+                won_cases: list = steps_map[step]
+                won_cases.append(found_step)
+        return steps_map
+
+
+class Steps:
+
+    def __init__(self, won_steps_map: dict):
+        self.steps = list(won_steps_map.keys())
+        self.won_steps_map = won_steps_map
+
+    def get_valid_steps(self) -> list:
+        return self.steps
 
     def is_valid_choice(self, choice: str) -> bool:
-        return choice in self.valid_steps
+        return choice in self.steps
+
+    def does_beat_second_by_first(self, first: str, second: str) -> bool:
+        return first in self.won_steps_map[second]
+
+
+class RockPaperScissorsEngine:
+
+    def __init__(self, steps: Steps):
+        self.steps = steps
+
+    def is_valid_choice(self, choice: str) -> bool:
+        return self.steps.is_valid_choice(choice)
 
     def action(self, player_choice: str) -> AnswerStep:
-        if not self.is_valid_choice(player_choice):
+        if not self.steps.is_valid_choice(player_choice):
             return AnswerStep(0, 'Invalid input')
-        computer_choice = random.choice(self.valid_steps)
+        computer_choice = random.choice(self.steps.get_valid_steps())
         if player_choice == computer_choice:
             answer = AnswerStep(50, f'There is a draw ({player_choice})')
-        elif computer_choice not in self.won_steps[player_choice]:
+        elif self.steps.does_beat_second_by_first(player_choice, computer_choice):
+            # not (computer_choice in self.won_steps[player_choice]):
             answer = AnswerStep(100, f'Well done. The computer chose {computer_choice} and failed')
         else:
             answer = AnswerStep(0, f'Sorry, but the computer chose {computer_choice}')
@@ -83,7 +123,15 @@ def main():
     print(f'Hello, {name}')
     rating_storage = RatingsStorage('rating.txt')
 
-    engine = RockPaperScissorsEngine()
+    steps_str: str = input().strip()
+    if len(steps_str) == 0:
+        steps_str = 'paper,scissors,rock'
+
+    # print(StepsMapCreator.create_map(steps_str.split(',')))
+    # return
+    steps = Steps(StepsMapCreator.create_map(steps_str.split(',')))
+
+    engine = RockPaperScissorsEngine(steps)
     while True:
         player_choice = input()
         if player_choice == '!exit':
