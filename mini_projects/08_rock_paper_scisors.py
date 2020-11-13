@@ -1,3 +1,7 @@
+# https://hyperskill.org/projects/78/stages/435/implement
+# rock,paper,scissors,lizard,spock
+# rock,gun,lightning,devil,dragon,water,air,paper,sponge,wolf,tree,human,snake,scissors,fire
+
 import os.path
 import random
 
@@ -38,11 +42,14 @@ class StepsMapCreator:
                         continue
                     if step in steps_map[y]:
                         continue
+                    if y in steps_map[step]:
+                        continue
                     found_step = y
                     break
 
                 won_cases: list = steps_map[step]
                 won_cases.append(found_step)
+                # steps_map[step].append(found_step)
         return steps_map
 
 
@@ -126,7 +133,7 @@ def main():
     steps_str: str = input().strip()
     if len(steps_str) == 0:
         steps_str = 'paper,scissors,rock'
-
+    print('Okay, let\'s start')
     # print(StepsMapCreator.create_map(steps_str.split(',')))
     # return
     steps = Steps(StepsMapCreator.create_map(steps_str.split(',')))
