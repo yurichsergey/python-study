@@ -10,7 +10,8 @@ class CardGenerator:
     def generate_card_number(self) -> str:
         return '400' + '000' + self.__generate_digit_str(10)
 
-    def __generate_digit_str(self, count: int):
+    @staticmethod
+    def __generate_digit_str(count: int):
         return ''.join([str(random.randint(0, 9)) for i in range(count)])
 
 
@@ -47,15 +48,16 @@ class Bank:
         self.__storage = {}
         self.__generator = CardGenerator()
 
-    def create_card(self, card: Card) -> Card:
+    def create_card(self) -> Card:
         card_number = self.__generate_unique_card_number()
         pin = self.__generator.generate_pin()
         card = Card(card_number, pin)
         self.__storage[card.get_card_number()] = card
+        return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         card: Card = self.__storage[card_number] if card_number in self.__storage else None
-        return card if card.is_correct_pin(pin) else None
+        return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
 
     def __generate_unique_card_number(self) -> str:
         card_number = None
