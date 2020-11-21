@@ -2,13 +2,29 @@
 import random
 
 
+class LuhnAlgorithm:
+
+    @staticmethod
+    def generate_check_sum(numbers_str: str):
+        numbers_int = [int(x) for x in numbers_str]
+
+        sum_digits = sum(
+            [n - 9 if n > 9 else n for n in
+             [2 * numbers_int[i] if (i + 1) % 2 else numbers_int[i] for i in range(len(numbers_int))]
+             ]
+        )
+        rest_of_divider = sum_digits % 10
+        return 10 - rest_of_divider if rest_of_divider else 0
+
+
 class CardGenerator:
 
     def generate_pin(self) -> str:
         return self.__generate_digit_str(4)
 
     def generate_card_number(self) -> str:
-        return '400' + '000' + self.__generate_digit_str(10)
+        number = '400' + '000' + self.__generate_digit_str(9)
+        return number + str(LuhnAlgorithm.generate_check_sum(number))
 
     @staticmethod
     def __generate_digit_str(count: int):
@@ -97,7 +113,7 @@ class Action:
             while True:
                 user_choice = int(input(greeting))
                 if user_choice == 1:  # 1. Balance
-                    print(f'Balane: {card.get_balance()}')
+                    print(f'Balance: {card.get_balance()}')
                 elif user_choice == 2:  # 2. Log out
                     print('You have successfully logged out!')
                     break
