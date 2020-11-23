@@ -118,20 +118,20 @@ class BankCardDbStorage(BankCardStorageInterface):
         pin = self.__generator.generate_pin()
         card = Card(card_number, pin)
         # @todo change to insert ignore and update
-        query = f'''
-        INSERT INTO card (number, pin) VALUES
-        ({card.get_card_number()}, {card.get_pin_code()})
-        '''
+        query = f'''INSERT INTO card (number, pin) VALUES (?, ?)'''
+        values = (card.get_card_number(), card.get_pin_code(),)
         cur = self.__conn.cursor()
-        cur.execute(query)
+        cur.execute(query, values)
         self.__conn.commit()
         return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
-        query = f'''SELECT number, pin FROM card WHERE number={card_number} AND pin={pin}'''
+        query = f'''SELECT number, pin FROM card WHERE number=? AND pin=?'''
+        values = (card_number, pin,)
         cur = self.__conn.cursor()
-        cur.execute(query)
+        cur.execute(query, values)
         fetched = cur.fetchone()
+        cur.close()
         card = None
         if fetched:
             print(fetched)
