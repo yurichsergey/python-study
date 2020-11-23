@@ -132,30 +132,28 @@ class BankCardDbStorage(BankCardStorageInterface):
         card = Card(card_number, pin)
         # @todo change to insert ignore and update
         self.__execute(
-            f'INSERT INTO card (number, pin) VALUES (?, ?)',
+            'INSERT INTO card (number, pin) VALUES (?, ?)',
             (card.get_card_number(), card.get_pin_code(),)
         )
         return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         fetched = self.__fetchone(
-            f'SELECT number, pin FROM card WHERE number=? AND pin=?',
+            'SELECT number, pin FROM card WHERE number=? AND pin=?',
             (card_number, pin,)
         )
         card = None
         if fetched:
-            print(fetched)
-            print(type(fetched))
             number, pin = fetched
             card = Card(number, pin)
         return card
 
     def fetch_all(self):
-        fetchall = self.__fetchall(f'SELECT * FROM card')
+        fetchall = self.__fetchall('SELECT * FROM card')
         return fetchall
 
     def fetch_all_numbers(self) -> frozenset:
-        fetched = self.__fetchall(f'SELECT number FROM card')
+        fetched = self.__fetchall('SELECT number FROM card')
         return frozenset(n[0] for n in fetched)
 
     def __generate_unique_card_number(self) -> str:
@@ -172,10 +170,9 @@ class BankCardDbStorage(BankCardStorageInterface):
         return card_number
 
     def __create_table(self) -> None:
-        # PRIMARY KEY AUTOINCREMENT,
         query = '''
         CREATE TABLE IF NOT EXISTS card (
-            id INTEGER,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             number TEXT,
             pin TEXT,
             balance INTEGER DEFAULT 0
@@ -210,6 +207,12 @@ class Bank:
         self.__storage = storage
         self.__generator = CardGenerator()
 
+    def open(self):
+        self.__storage.open()
+
+    def close(self):
+        self.__storage.close()
+
     def create_card(self) -> Card:
         return self.__storage.create_card()
 
@@ -217,9 +220,37 @@ class Bank:
         return self.__storage.find_by_card_and_pin(card_number, pin)
 
 
+class Menu:
+
+    @staticmethod
+    def process(menu: dict) -> None:
+        greeting = '\n'.join(f'{k}: ' + menu[k][0] for k in menu.keys()) + '\n'
+        while True:
+            user_choice = int(input(greeting))
+            if user_choice in menu:
+                try:
+                    menu[user_choice][1]()
+                except GeneratorExit:
+                    break
+
+
+class ActionLogIn:
+
+    def __init__(self, card: Card):
+        self.__card = card
+
+    def print_balance(self) -> None:
+        print(f'Balance: {self.__card.get_balance()}')
+
+    def log_out(self) -> None:
+        print('You have successfully logged out!')
+        raise GeneratorExit
+
+
 class Action:
 
     def __init__(self, bank: Bank):
+        bank.open()
         self.__bank = bank
 
     def create_card(self):
@@ -228,54 +259,39 @@ class Action:
         print(f'Your card number:\n{card.get_card_number()}')
         print(f'Your card PIN:\n{card.get_pin_code()}')
 
-    def show_info(self, card_number, pin):
+    def show_info(self):
+        card_number = input('Enter your card number:')
+        pin = input('Enter your PIN:')
+
         card = self.__bank.find_by_card_and_pin(card_number, pin)
         if card is None:
             print('Wrong card number or PIN!')
         else:
             print('You have successfully logged in!')
-            greeting = '\n'.join([
-                '1. Balance',
-                '2. Log out',
-                '0. Exit',
-            ])
-            while True:
-                user_choice = int(input(greeting))
-                if user_choice == 1:  # 1. Balance
-                    print(f'Balance: {card.get_balance()}')
-                elif user_choice == 2:  # 2. Log out
-                    print('You have successfully logged out!')
-                    break
-                elif user_choice == 0:  # 0. Exit
-                    print('Bye!')
-                    exit()
-                else:
-                    continue
+            action_log_in = ActionLogIn(card)
+            sub_menu = {
+                1: ('Balance', action_log_in.print_balance,),
+                2: ('Log out', action_log_in.log_out,),
+                0: ('Exit', self.close_bank,),
+            }
+            Menu.process(sub_menu)
+
+    def close_bank(self):
+        self.__bank.close()
+        print('Bye!')
+        exit()
 
 
 def main():
-    greeting = '\n'.join([
-        '1. Create an account',
-        '2. Log into account',
-        '0. Exit',
-    ])
-    storage = BankCardDbStorage()
-    storage.open()
-    action = Action(Bank(storage))
-    while True:
-        user_choice = int(input(greeting))
-        if user_choice == 1:  # 1. Create an account
-            action.create_card()
-        elif user_choice == 2:  # 2. Log into account
-            card_number = input('Enter your card number:')
-            pin = input('Enter your PIN:')
-            action.show_info(card_number, pin)
-        elif user_choice == 0:  # 0. Exit
-            storage.close()
-            print('Bye!')
-            break
-        else:
-            continue
+    bank = Bank(BankCardDbStorage())
+    action = Action(bank)
+
+    main_menu = {
+        1: ('Create an account', action.create_card,),
+        2: ('Log into account', action.show_info,),
+        0: ('Exit', action.close_bank,),
+    }
+    Menu.process(main_menu)
 
 
 class TestLunchAlgorithm(unittest.TestCase):
