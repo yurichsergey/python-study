@@ -30,8 +30,9 @@ class CardGenerator:
         return number + str(LuhnAlgorithm.generate_check_sum(number))
 
     @staticmethod
-    def __generate_digit_str(count: int):
-        return ''.join([str(random.randint(0, 9)) for i in range(count)])
+    def __generate_digit_str(count: int) -> str:
+        # return ''.join([str(random.randint(0, 9)) for i in range(count)])
+        return ('{:0' + str(count) + '}').format(random.randint(0, int('9' * count)))
 
 
 class Card:
