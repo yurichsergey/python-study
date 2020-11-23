@@ -69,7 +69,7 @@ class Card:
 
 class BankCardStorageInterface:
 
-    def add_card(self, card: Card) -> None:
+    def create_card(self) -> typing.Optional[Card]:
         pass
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
@@ -79,24 +79,44 @@ class BankCardStorageInterface:
 class BankCardMemoryStorage(BankCardStorageInterface):
 
     def __init__(self):
-        # Card[]
-        self.__storage = {}
+        self.__storage: typing.Dict[Card] = {}
+        self.__generator = CardGenerator()
 
-    def add_card(self, card: Card) -> None:
+    def create_card(self) -> typing.Optional[Card]:
+        card_number = self.__generate_unique_card_number()
+        pin = self.__generator.generate_pin()
+        card = Card(card_number, pin)
         self.__storage[card.get_card_number()] = card
+        return card
 
-    def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
+    def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         card: Card = self.__storage[card_number] if card_number in self.__storage else None
         return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
+
+    def __generate_unique_card_number(self) -> str:
+        card_number = None
+        for i in range(100):
+            card_number = self.__generator.generate_card_number()
+            if card_number not in self.__storage:
+                break
+            else:
+                card_number = None
+        if card_number is None:
+            raise RuntimeError('cannot generate unique card number')
+        return card_number
 
 
 class BankCardDbStorage(BankCardStorageInterface):
 
     def __init__(self):
+        self.__generator = CardGenerator()
         self.__conn = sqlite3.connect('card.s3db')  # @todo move to the factory
         self.__create_table()  # @todo move to init method
 
-    def add_card(self, card: Card) -> None:
+    def create_card(self) -> typing.Optional[Card]:
+        card_number = self.__generate_unique_card_number()
+        pin = self.__generator.generate_pin()
+        card = Card(card_number, pin)
         # @todo change to insert ignore and update
         query = f'''
         INSERT INTO card (number, pin) VALUES
@@ -105,6 +125,7 @@ class BankCardDbStorage(BankCardStorageInterface):
         cur = self.__conn.cursor()
         cur.execute(query)
         self.__conn.commit()
+        return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         query = f'''SELECT number, pin FROM card WHERE number={card_number} AND pin={pin}'''
@@ -124,6 +145,25 @@ class BankCardDbStorage(BankCardStorageInterface):
         cur = self.__conn.cursor()
         cur.execute(query)
         return cur.fetchall()
+
+    def fetch_all_numbers(self) -> frozenset:
+        query = f'''SELECT number FROM card'''
+        cur = self.__conn.cursor()
+        cur.execute(query)
+        return frozenset(n[0] for n in cur.fetchall())
+
+    def __generate_unique_card_number(self) -> str:
+        card_number = None
+        all_numbers = self.fetch_all_numbers()
+        for i in range(100):
+            card_number = self.__generator.generate_card_number()
+            if card_number not in all_numbers:
+                break
+            else:
+                card_number = None
+        if card_number is None:
+            raise RuntimeError('cannot generate unique card number')
+        return card_number
 
     def __create_table(self) -> None:
         # PRIMARY KEY AUTOINCREMENT,
@@ -148,26 +188,10 @@ class Bank:
         self.__generator = CardGenerator()
 
     def create_card(self) -> Card:
-        card_number = self.__generate_unique_card_number()
-        pin = self.__generator.generate_pin()
-        card = Card(card_number, pin)
-        self.__storage.add_card(card)
-        return card
+        return self.__storage.create_card()
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         return self.__storage.find_by_card_and_pin(card_number, pin)
-
-    def __generate_unique_card_number(self) -> str:
-        card_number = None
-        for i in range(100):
-            card_number = self.__generator.generate_card_number()
-            if card_number not in self.__storage:
-                break
-            else:
-                card_number = None
-        if card_number is None:
-            raise RuntimeError('cannot generate unique card number')
-        return card_number
 
 
 class Action:
@@ -238,12 +262,12 @@ class TestLunchAlgorithm(unittest.TestCase):
 
 def manual_test_db():
     s = BankCardDbStorage()
-    card = Card('0980809', '89')
-    s.add_card(card)
+    card = s.create_card()
     print(s.fetch_all())
     fetched_card = s.find_by_card_and_pin(card.get_card_number(), card.get_pin_code())
     print(fetched_card)
     print(fetched_card.to_dict())
+    print(s.fetch_all_numbers())
 
 
 if __name__ == '__main__':
