@@ -1,11 +1,12 @@
 # Bank system
 import random
+import unittest
 
 
 class LuhnAlgorithm:
 
     @staticmethod
-    def generate_check_sum(numbers_str: str):
+    def generate_check_sum(numbers_str: str) -> int:
         numbers_int = [int(x) for x in numbers_str]
 
         sum_digits = sum(
@@ -144,6 +145,14 @@ def main():
             break
         else:
             continue
+
+
+class TestLunchAlgorithm(unittest.TestCase):
+
+    def test_checksum(self):
+        self.assertEqual(7, LuhnAlgorithm.generate_check_sum('400000342979508'))
+        self.assertEqual(3, LuhnAlgorithm.generate_check_sum('400000844943340'))
+        self.assertEqual(6, LuhnAlgorithm.generate_check_sum('400000493832089'))
 
 
 if __name__ == '__main__':
