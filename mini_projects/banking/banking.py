@@ -1,5 +1,7 @@
 # Bank system
 import random
+import sqlite3
+import typing
 import unittest
 
 
@@ -57,6 +59,13 @@ class Card:
     def change_balance(self, increment: float) -> None:
         self.__balance += increment
 
+    def to_dict(self) -> dict:
+        return {
+            'number': self.__card_number,
+            'pin': self.__pin_code,
+            'balance': self.__balance,
+        }
+
 
 class BankCardStorageInterface:
 
@@ -81,10 +90,61 @@ class BankCardMemoryStorage(BankCardStorageInterface):
         return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
 
 
+class BankCardDbStorage(BankCardStorageInterface):
+
+    def __init__(self):
+        self.__conn = sqlite3.connect('card.s3db')  # @todo move to the factory
+        self.__create_table()  # @todo move to init method
+
+    def add_card(self, card: Card) -> None:
+        # @todo change to insert ignore and update
+        query = f'''
+        INSERT INTO card (number, pin) VALUES
+        ({card.get_card_number()}, {card.get_pin_code()})
+        '''
+        cur = self.__conn.cursor()
+        cur.execute(query)
+        self.__conn.commit()
+
+    def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
+        query = f'''SELECT number, pin FROM card WHERE number={card_number} AND pin={pin}'''
+        cur = self.__conn.cursor()
+        cur.execute(query)
+        fetched = cur.fetchone()
+        card = None
+        if fetched:
+            print(fetched)
+            print(type(fetched))
+            number, pin = fetched
+            card = Card(number, pin)
+        return card
+
+    def fetch_all(self):
+        query = f'''SELECT * FROM card'''
+        cur = self.__conn.cursor()
+        cur.execute(query)
+        return cur.fetchall()
+
+    def __create_table(self) -> None:
+        # PRIMARY KEY AUTOINCREMENT,
+        query = '''
+        CREATE TABLE IF NOT EXISTS card (
+            id INTEGER,
+            number TEXT,
+            pin TEXT,
+            balance INTEGER DEFAULT 0
+        )
+        '''
+        cur = self.__conn.cursor()
+        cur.execute(query)
+        self.__conn.commit()
+
+
 class Bank:
 
     def __init__(self):
-        self.__storage:BankCardStorageInterface = BankCardMemoryStorage()
+        # self.__storage: BankCardStorageInterface = BankCardMemoryStorage()
+        self.__storage: BankCardStorageInterface = BankCardDbStorage()
         self.__generator = CardGenerator()
 
     def create_card(self) -> Card:
@@ -176,5 +236,16 @@ class TestLunchAlgorithm(unittest.TestCase):
         self.assertEqual(6, LuhnAlgorithm.generate_check_sum('400000493832089'))
 
 
+def manual_test_db():
+    s = BankCardDbStorage()
+    card = Card('0980809', '89')
+    s.add_card(card)
+    print(s.fetch_all())
+    fetched_card = s.find_by_card_and_pin(card.get_card_number(), card.get_pin_code())
+    print(fetched_card)
+    print(fetched_card.to_dict())
+
+
 if __name__ == '__main__':
     main()
+    # manual_test_db()
