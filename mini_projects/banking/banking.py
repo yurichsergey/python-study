@@ -75,6 +75,12 @@ class BankCardStorageInterface:
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         pass
 
+    def open(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
 
 class BankCardMemoryStorage(BankCardStorageInterface):
 
@@ -110,28 +116,31 @@ class BankCardDbStorage(BankCardStorageInterface):
 
     def __init__(self):
         self.__generator = CardGenerator()
-        self.__conn = sqlite3.connect('card.s3db')  # @todo move to the factory
+        self.__conn: typing.Optional[sqlite3.Connection] = None
+
+    def open(self) -> None:
+        self.__conn: typing.Optional[sqlite3.Connection] = sqlite3.connect('card.s3db')  # @todo move to the factory
         self.__create_table()  # @todo move to init method
+
+    def close(self) -> None:
+        self.__conn.close()
 
     def create_card(self) -> typing.Optional[Card]:
         card_number = self.__generate_unique_card_number()
         pin = self.__generator.generate_pin()
         card = Card(card_number, pin)
         # @todo change to insert ignore and update
-        query = f'''INSERT INTO card (number, pin) VALUES (?, ?)'''
-        values = (card.get_card_number(), card.get_pin_code(),)
-        cur = self.__conn.cursor()
-        cur.execute(query, values)
-        self.__conn.commit()
+        self.__execute(
+            f'INSERT INTO card (number, pin) VALUES (?, ?)',
+            (card.get_card_number(), card.get_pin_code(),)
+        )
         return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
-        query = f'''SELECT number, pin FROM card WHERE number=? AND pin=?'''
-        values = (card_number, pin,)
-        cur = self.__conn.cursor()
-        cur.execute(query, values)
-        fetched = cur.fetchone()
-        cur.close()
+        fetched = self.__fetchone(
+            f'SELECT number, pin FROM card WHERE number=? AND pin=?',
+            (card_number, pin,)
+        )
         card = None
         if fetched:
             print(fetched)
@@ -141,16 +150,12 @@ class BankCardDbStorage(BankCardStorageInterface):
         return card
 
     def fetch_all(self):
-        query = f'''SELECT * FROM card'''
-        cur = self.__conn.cursor()
-        cur.execute(query)
-        return cur.fetchall()
+        fetchall = self.__fetchall(f'SELECT * FROM card')
+        return fetchall
 
     def fetch_all_numbers(self) -> frozenset:
-        query = f'''SELECT number FROM card'''
-        cur = self.__conn.cursor()
-        cur.execute(query)
-        return frozenset(n[0] for n in cur.fetchall())
+        fetched = self.__fetchall(f'SELECT number FROM card')
+        return frozenset(n[0] for n in fetched)
 
     def __generate_unique_card_number(self) -> str:
         card_number = None
@@ -175,16 +180,33 @@ class BankCardDbStorage(BankCardStorageInterface):
             balance INTEGER DEFAULT 0
         )
         '''
+        self.__execute(query)
+
+    def __fetchone(self, query, values) -> tuple:
+        cur = self.__conn.cursor()
+        cur.execute(query, values)
+        fetched = cur.fetchone()
+        cur.close()
+        return fetched
+
+    def __fetchall(self, query) -> list:
         cur = self.__conn.cursor()
         cur.execute(query)
+        fetched = cur.fetchall()
+        cur.close()
+        return fetched
+
+    def __execute(self, query, values=tuple()) -> None:
+        cur = self.__conn.cursor()
+        cur.execute(query, values)
         self.__conn.commit()
+        cur.close()
 
 
 class Bank:
 
-    def __init__(self):
-        # self.__storage: BankCardStorageInterface = BankCardMemoryStorage()
-        self.__storage: BankCardStorageInterface = BankCardDbStorage()
+    def __init__(self, storage: BankCardStorageInterface):
+        self.__storage = storage
         self.__generator = CardGenerator()
 
     def create_card(self) -> Card:
@@ -236,7 +258,9 @@ def main():
         '2. Log into account',
         '0. Exit',
     ])
-    action = Action(Bank())
+    storage = BankCardDbStorage()
+    storage.open()
+    action = Action(Bank(storage))
     while True:
         user_choice = int(input(greeting))
         if user_choice == 1:  # 1. Create an account
@@ -246,6 +270,7 @@ def main():
             pin = input('Enter your PIN:')
             action.show_info(card_number, pin)
         elif user_choice == 0:  # 0. Exit
+            storage.close()
             print('Bye!')
             break
         else:
@@ -262,6 +287,7 @@ class TestLunchAlgorithm(unittest.TestCase):
 
 def manual_test_db():
     s = BankCardDbStorage()
+    s.open()
     card = s.create_card()
     print(s.fetch_all())
     fetched_card = s.find_by_card_and_pin(card.get_card_number(), card.get_pin_code())
