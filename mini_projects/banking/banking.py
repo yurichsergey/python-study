@@ -58,13 +58,22 @@ class Card:
         self.__balance += increment
 
 
-class BankStorage:
+class BankCardStorageInterface:
+
+    def add_card(self, card: Card) -> None:
+        pass
+
+    def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
+        pass
+
+
+class BankCardMemoryStorage(BankCardStorageInterface):
 
     def __init__(self):
         # Card[]
         self.__storage = {}
 
-    def add_card(self, card: Card):
+    def add_card(self, card: Card) -> None:
         self.__storage[card.get_card_number()] = card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
@@ -75,8 +84,7 @@ class BankStorage:
 class Bank:
 
     def __init__(self):
-        # Card[]
-        self.__storage = BankStorage()
+        self.__storage:BankCardStorageInterface = BankCardMemoryStorage()
         self.__generator = CardGenerator()
 
     def create_card(self) -> Card:
