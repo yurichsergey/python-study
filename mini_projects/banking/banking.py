@@ -58,23 +58,36 @@ class Card:
         self.__balance += increment
 
 
-class Bank:
+class BankStorage:
 
     def __init__(self):
         # Card[]
         self.__storage = {}
+
+    def add_card(self, card: Card):
+        self.__storage[card.get_card_number()] = card
+
+    def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
+        card: Card = self.__storage[card_number] if card_number in self.__storage else None
+        return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
+
+
+class Bank:
+
+    def __init__(self):
+        # Card[]
+        self.__storage = BankStorage()
         self.__generator = CardGenerator()
 
     def create_card(self) -> Card:
         card_number = self.__generate_unique_card_number()
         pin = self.__generator.generate_pin()
         card = Card(card_number, pin)
-        self.__storage[card.get_card_number()] = card
+        self.__storage.add_card(card)
         return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
-        card: Card = self.__storage[card_number] if card_number in self.__storage else None
-        return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
+        return self.__storage.find_by_card_and_pin(card_number, pin)
 
     def __generate_unique_card_number(self) -> str:
         card_number = None
