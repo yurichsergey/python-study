@@ -390,6 +390,24 @@ class TestLunchAlgorithm(unittest.TestCase):
         self.assertEqual(3, LuhnAlgorithm.generate_check_sum('400000844943340'))
         self.assertEqual(6, LuhnAlgorithm.generate_check_sum('400000493832089'))
 
+    def test_correct_number(self):
+        self.assertTrue(LuhnAlgorithm.check_is_correct_number('4000003429795087'))
+        self.assertTrue(LuhnAlgorithm.check_is_correct_number('4000008449433403'))
+        self.assertTrue(LuhnAlgorithm.check_is_correct_number('4000004938320896'))
+
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795080'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795081'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795082'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795083'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795084'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795085'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795086'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795088'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000003429795089'))
+
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000008449433405'))
+        self.assertFalse(LuhnAlgorithm.check_is_correct_number('4000004938320898'))
+
 
 def manual_test_db():
     s = BankCardDbStorage()
