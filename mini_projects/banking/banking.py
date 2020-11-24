@@ -64,6 +64,7 @@ class Card:
         self.__card_number: str = card_number
         self.__pin_code: str = pin_code
         self.__balance: int = balance
+        self.__operations: list = []
 
     def set_pin(self, pin: str) -> None:
         self.__pin_code = pin
@@ -82,6 +83,13 @@ class Card:
 
     def change_balance(self, increment: int) -> None:
         self.__balance += increment
+        self.__operations.append(increment)
+
+    def get_operations(self) -> list:
+        return self.__operations
+
+    def clear_operations(self) -> None:
+        self.__operations = []
 
     def to_dict(self) -> dict:
         return {
@@ -100,6 +108,9 @@ class BankCardStorageInterface:
         pass
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
+        pass
+
+    def apply_operations(self, card: Card) -> None:
         pass
 
     def close_account(self, card: Card) -> None:
@@ -131,6 +142,10 @@ class BankCardMemoryStorage(BankCardStorageInterface):
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         card: Card = self.__storage.get(card_number)
         return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
+
+    def apply_operations(self, card: Card) -> None:
+        # We have already changed card object, because all objects store in memory and we work by reference
+        pass
 
     def close_account(self, card: Card) -> None:
         self.__storage.pop(card.get_card_number())
@@ -185,6 +200,14 @@ class BankCardDbStorage(BankCardStorageInterface):
             (card_number, pin,)
         )
         return self.__map_fetched_data(fetched)
+
+    def apply_operations(self, card: Card) -> None:
+        for operation in card.get_operations():
+            self.__execute(
+                'UPDATE card SET balance = balance + ? WHERE number=?',
+                (operation, card.get_card_number(),)
+            )  # @todo add transaction and check for exists in DB
+        card.clear_operations()
 
     def close_account(self, card: Card) -> None:
         self.__execute(
@@ -274,6 +297,9 @@ class Bank:
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         return self.__storage.find_by_card_and_pin(card_number, pin)
 
+    def commit_card_operations(self, card: Card) -> None:
+        self.__storage.apply_operations(card)
+
     def close_account(self, card: Card) -> None:
         return self.__storage.close_account(card)
 
@@ -312,19 +338,33 @@ class ActionPersonalCabinet:
         print('Income was added!')
 
     def do_transfer(self) -> None:
-        """
-        Do transfer item allows transferring money to another account. We handle the following errors:
-
-        If the user tries to transfer more money than he/she has, output: "Not enough money!"
-        If the user tries to transfer money to the same account, output the following message: “You can't transfer money to the same account!”
-        If the receiver's card number doesn’t pass the Luhn algorithm, you should output: “Probably you made a mistake in the card number. Please try again!”
-        If the receiver's card number doesn’t exist, you should output: “Such a card does not exist.”
-        If there is no error, ask the user how much money they want to transfer and make the transaction.
-
-        :return:
-        """
         print('Transfer')
         card_number = input('Enter card number:')
+
+        error = ''
+        if not LuhnAlgorithm.check_is_correct_number(card_number):
+            error = 'Probably you made a mistake in the card number. Please try again!'
+        elif card_number == self.__card.get_card_number():
+            error = "You can't transfer money to the same account!"
+
+        other_card: typing.Optional[Card] = None
+        if not error:
+            other_card = self.__bank.find_by_card_number(card_number)
+        if not Card:
+            error = 'Such a card does not exist.'
+
+        money = 0
+        if not error:
+            money = int(input('Enter how much money you want to transfer:'))
+
+        if money > self.__card.get_balance():
+            error = 'Not enough money!'
+
+        if error:
+            print(error)
+            return
+        self.__card.change_balance(-money)
+        other_card.change_balance(money)
 
     def close_account(self) -> None:
         self.__bank.close_account(self.__card)
