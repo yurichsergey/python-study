@@ -104,6 +104,9 @@ class BankCardStorageInterface:
     def create_card(self) -> typing.Optional[Card]:
         pass
 
+    def fetch_all(self) -> typing.List[Card]:
+        pass
+
     def find_by_card_number(self, card_number: str) -> typing.Optional[Card]:
         pass
 
@@ -135,6 +138,9 @@ class BankCardMemoryStorage(BankCardStorageInterface):
         card = Card(card_number, pin, 0)
         self.__storage[card.get_card_number()] = card
         return card
+
+    def fetch_all(self) -> typing.List[Card]:
+        return list(self.__storage.values())
 
     def find_by_card_number(self, card_number: str) -> typing.Optional[Card]:
         return self.__storage.get(card_number)
@@ -189,14 +195,14 @@ class BankCardDbStorage(BankCardStorageInterface):
 
     def find_by_card_number(self, card_number: str) -> typing.Optional[Card]:
         fetched = self.__fetchone(
-            'SELECT number, pin, balance FROM card WHERE number=?',
+            f'SELECT {self.__columns_for_mapping()} FROM card WHERE number=?',
             (card_number,)
         )
         return self.__map_fetched_data(fetched)
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         fetched = self.__fetchone(
-            'SELECT number, pin, balance FROM card WHERE number=? AND pin=?',
+            f'SELECT {self.__columns_for_mapping()} FROM card WHERE number=? AND pin=?',
             (card_number, pin,)
         )
         return self.__map_fetched_data(fetched)
@@ -215,13 +221,17 @@ class BankCardDbStorage(BankCardStorageInterface):
             (card.get_card_number(),)
         )
 
-    def fetch_all(self) -> list:
-        fetchall = self.__fetchall('SELECT * FROM card')
-        return fetchall
+    def fetch_all(self) -> typing.List[Card]:
+        fetchall = self.__fetchall(f'SELECT {self.__columns_for_mapping()} FROM card')
+        return [self.__map_fetched_data(fetched) for fetched in fetchall]
 
     def fetch_all_numbers(self) -> frozenset:
         fetched = self.__fetchall('SELECT number FROM card')
         return frozenset(n[0] for n in fetched)
+
+    @staticmethod
+    def __columns_for_mapping() -> str:
+        return 'number, pin, balance'
 
     @staticmethod
     def __map_fetched_data(fetched: typing.Optional[tuple]) -> typing.Optional[Card]:
@@ -282,14 +292,17 @@ class Bank:
         self.__storage = storage
         self.__generator = CardGenerator()
 
-    def open(self):
+    def open(self) -> None:
         self.__storage.open()
 
-    def close(self):
+    def close(self) -> None:
         self.__storage.close()
 
     def create_card(self) -> Card:
         return self.__storage.create_card()
+
+    def fetch_all_data(self) -> typing.List[Card]:
+        return self.__storage.fetch_all()
 
     def find_by_card_number(self, card_number: str) -> Card:
         return self.__storage.find_by_card_number(card_number)
@@ -335,6 +348,7 @@ class ActionPersonalCabinet:
     def add_income(self) -> None:
         value = int(input('Enter income:'))
         self.__card.change_balance(value)
+        self.__bank.commit_card_operations(self.__card)
         print('Income was added!')
 
     def do_transfer(self) -> None:
@@ -365,6 +379,9 @@ class ActionPersonalCabinet:
             return
         self.__card.change_balance(-money)
         other_card.change_balance(money)
+        self.__bank.commit_card_operations(self.__card)
+        self.__bank.commit_card_operations(other_card)
+        print('Success!')
 
     def close_account(self) -> None:
         self.__bank.close_account(self.__card)
@@ -398,12 +415,16 @@ class Action:
             sub_menu = {
                 1: ('Balance', sub_actions.print_balance,),
                 2: ('Add income', sub_actions.add_income,),
-                3: ('Do transfer',),
+                3: ('Do transfer', sub_actions.do_transfer,),
                 4: ('Close account', sub_actions.close_account,),
                 5: ('Log out', sub_actions.log_out,),
                 0: ('Exit', self.close_bank,),
             }
             Menu.process(sub_menu)
+
+    def fetch_all_data(self):
+        cards: typing.List[dict] = [card.to_dict() for card in self.__bank.fetch_all_data()]
+        print(cards)
 
     def close_bank(self):
         self.__bank.close()
@@ -418,6 +439,7 @@ def main():
     main_menu = {
         1: ('Create an account', action.create_card,),
         2: ('Log into account', action.show_info,),
+        -1: ('Fetch all data', action.fetch_all_data,),
         0: ('Exit', action.close_bank,),
     }
     Menu.process(main_menu)
