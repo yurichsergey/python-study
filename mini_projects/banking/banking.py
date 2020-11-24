@@ -9,13 +9,29 @@ class LuhnAlgorithm:
 
     @staticmethod
     def generate_check_sum(numbers_str: str) -> int:
+        """
+        Luhn algorithm.
+
+        The Luhn algorithm is used to validate a credit card number or other identifying numbers,
+        such as Social Security. The Luhn algorithm, also called the Luhn formula or modulus 10,
+        checks the sum of the digits in the card number and checks whether the sum matches the
+        expected result or if there is an error in the number sequence. After working through the
+        algorithm, if the total modulus 10 equals zero, then the number is valid according to the
+        Luhn method.
+
+        :param numbers_str:str
+        :return: int
+        """
         numbers_int = [int(x) for x in numbers_str]
 
-        sum_digits = sum(
-            [n - 9 if n > 9 else n for n in
-             [2 * numbers_int[i] if (i + 1) % 2 else numbers_int[i] for i in range(len(numbers_int))]
-             ]
+        sum_digits = sum(  # Thirdly: Add all numbers
+            # Secondly: Subtract 9 to numbers over 9
+            (n - 9 if n > 9 else n for n in
+             # Firstly: Multiply odd digits by 2
+             (2 * numbers_int[i] if (i + 1) % 2 else numbers_int[i] for i in range(len(numbers_int)))
+             )
         )
+        # Fourthly: Calculate rest of divider by ten.
         rest_of_divider = sum_digits % 10
         return 10 - rest_of_divider if rest_of_divider else 0
 
@@ -296,7 +312,7 @@ class ActionPersonalCabinet:
         print('Income was added!')
 
     def do_transfer(self) -> None:
-        '''
+        """
         Do transfer item allows transferring money to another account. We handle the following errors:
 
         If the user tries to transfer more money than he/she has, output: "Not enough money!"
@@ -306,7 +322,7 @@ class ActionPersonalCabinet:
         If there is no error, ask the user how much money they want to transfer and make the transaction.
 
         :return:
-        '''
+        """
         print('Transfer')
         card_number = input('Enter card number:')
 
