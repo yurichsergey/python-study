@@ -364,15 +364,14 @@ class ActionPersonalCabinet:
         other_card: typing.Optional[Card] = None
         if not error:
             other_card = self.__bank.find_by_card_number(card_number)
-        if not Card:
-            error = 'Such a card does not exist.'
+            if other_card is None:
+                error = 'Such a card does not exist.'
 
         money = 0
         if not error:
             money = int(input('Enter how much money you want to transfer:'))
-
-        if money > self.__card.get_balance():
-            error = 'Not enough money!'
+            if money > self.__card.get_balance():
+                error = 'Not enough money!'
 
         if error:
             print(error)
