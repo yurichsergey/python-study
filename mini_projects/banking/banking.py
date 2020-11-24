@@ -54,7 +54,7 @@ class CardGenerator:
 
     @staticmethod
     def __generate_digit_str(count: int) -> str:
-        # return ''.join([str(random.randint(0, 9)) for i in range(count)])
+        # return ''.join([str(random.randint(0, 9)) for _ in range(count)])
         return ('{:0' + str(count) + '}').format(random.randint(0, int('9' * count)))
 
 
