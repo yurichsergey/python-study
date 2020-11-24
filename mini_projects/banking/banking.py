@@ -37,10 +37,10 @@ class CardGenerator:
 
 class Card:
 
-    def __init__(self, card_number: str, pin_code: str):
-        self.__card_number = card_number
-        self.__pin_code = pin_code
-        self.__balance: float = 0.
+    def __init__(self, card_number: str, pin_code: str, balance: int):
+        self.__card_number: str = card_number
+        self.__pin_code: str = pin_code
+        self.__balance: int = balance
 
     def set_pin(self, pin: str) -> None:
         self.__pin_code = pin
@@ -54,10 +54,10 @@ class Card:
     def is_correct_pin(self, pin: str) -> bool:
         return self.__pin_code == pin
 
-    def get_balance(self) -> float:
+    def get_balance(self) -> int:
         return self.__balance
 
-    def change_balance(self, increment: float) -> None:
+    def change_balance(self, increment: int) -> None:
         self.__balance += increment
 
     def to_dict(self) -> dict:
@@ -76,6 +76,9 @@ class BankCardStorageInterface:
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         pass
 
+    def close_account(self, card: Card) -> None:
+        pass
+
     def open(self) -> None:
         pass
 
@@ -92,13 +95,16 @@ class BankCardMemoryStorage(BankCardStorageInterface):
     def create_card(self) -> typing.Optional[Card]:
         card_number = self.__generate_unique_card_number()
         pin = self.__generator.generate_pin()
-        card = Card(card_number, pin)
+        card = Card(card_number, pin, 0)
         self.__storage[card.get_card_number()] = card
         return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         card: Card = self.__storage[card_number] if card_number in self.__storage else None
         return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
+
+    def close_account(self, card: Card) -> None:
+        self.__storage.pop(card.get_card_number())
 
     def __generate_unique_card_number(self) -> str:
         card_number = None
@@ -129,24 +135,30 @@ class BankCardDbStorage(BankCardStorageInterface):
     def create_card(self) -> typing.Optional[Card]:
         card_number = self.__generate_unique_card_number()
         pin = self.__generator.generate_pin()
-        card = Card(card_number, pin)
+        card = Card(card_number, pin, 0)
         # @todo change to insert ignore and update
         self.__execute(
-            'INSERT INTO card (number, pin) VALUES (?, ?)',
-            (card.get_card_number(), card.get_pin_code(),)
+            'INSERT INTO card (number, pin, balance) VALUES (?, ?, ?)',
+            (card.get_card_number(), card.get_pin_code(), 0)
         )
         return card
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         fetched = self.__fetchone(
-            'SELECT number, pin FROM card WHERE number=? AND pin=?',
+            'SELECT number, pin, balance FROM card WHERE number=? AND pin=?',
             (card_number, pin,)
         )
         card = None
         if fetched:
-            number, pin = fetched
-            card = Card(number, pin)
+            number, pin, balance = fetched
+            card = Card(number, pin, balance)
         return card
+
+    def close_account(self, card: Card) -> None:
+        self.__execute(
+            'DELETE FROM card WHERE number=?',
+            (card.get_card_number(),)
+        )
 
     def fetch_all(self):
         fetchall = self.__fetchall('SELECT * FROM card')
@@ -219,6 +231,9 @@ class Bank:
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         return self.__storage.find_by_card_and_pin(card_number, pin)
 
+    def close_account(self, card: Card) -> None:
+        return self.__storage.close_account(card)
+
 
 class Menu:
 
@@ -234,16 +249,29 @@ class Menu:
                     break
 
 
-class ActionLogIn:
+class ActionPersonalCabinet:
 
-    def __init__(self, card: Card):
-        self.__card = card
+    def __init__(self, card: Card, bank: Bank):
+        self.__bank: Bank = bank
+        self.__card: typing.Optional[Card] = card
 
     def print_balance(self) -> None:
         print(f'Balance: {self.__card.get_balance()}')
 
     def log_out(self) -> None:
+        self.__card = None
         print('You have successfully logged out!')
+        raise GeneratorExit
+
+    def add_income(self) -> None:
+        value = int(input('Enter income:'))
+        self.__card.change_balance(value)
+        print('Income was added!')
+
+    def close_account(self) -> None:
+        self.__bank.close_account(self.__card)
+        self.__card = None
+        print('The account has been closed!')
         raise GeneratorExit
 
 
@@ -268,10 +296,13 @@ class Action:
             print('Wrong card number or PIN!')
         else:
             print('You have successfully logged in!')
-            action_log_in = ActionLogIn(card)
+            sub_actions = ActionPersonalCabinet(card, self.__bank)
             sub_menu = {
-                1: ('Balance', action_log_in.print_balance,),
-                2: ('Log out', action_log_in.log_out,),
+                1: ('Balance', sub_actions.print_balance,),
+                2: ('Add income', sub_actions.add_income,),
+                3: ('Do transfer',),
+                4: ('Close account', sub_actions.close_account,),
+                5: ('Log out', sub_actions.log_out,),
                 0: ('Exit', self.close_bank,),
             }
             Menu.process(sub_menu)
