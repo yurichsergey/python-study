@@ -73,7 +73,10 @@ class BankCardStorageInterface:
     def create_card(self) -> typing.Optional[Card]:
         pass
 
-    def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
+    def find_by_card_number(self, card_number: str) -> typing.Optional[Card]:
+        pass
+
+    def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         pass
 
     def close_account(self, card: Card) -> None:
@@ -89,7 +92,7 @@ class BankCardStorageInterface:
 class BankCardMemoryStorage(BankCardStorageInterface):
 
     def __init__(self):
-        self.__storage: typing.Dict[Card] = {}
+        self.__storage: typing.Dict[str, Card] = {}
         self.__generator = CardGenerator()
 
     def create_card(self) -> typing.Optional[Card]:
@@ -99,8 +102,11 @@ class BankCardMemoryStorage(BankCardStorageInterface):
         self.__storage[card.get_card_number()] = card
         return card
 
+    def find_by_card_number(self, card_number: str) -> typing.Optional[Card]:
+        return self.__storage.get(card_number)
+
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
-        card: Card = self.__storage[card_number] if card_number in self.__storage else None
+        card: Card = self.__storage.get(card_number)
         return card if isinstance(card, Card) and card.is_correct_pin(pin) else None
 
     def close_account(self, card: Card) -> None:
@@ -143,16 +149,19 @@ class BankCardDbStorage(BankCardStorageInterface):
         )
         return card
 
+    def find_by_card_number(self, card_number: str) -> typing.Optional[Card]:
+        fetched = self.__fetchone(
+            'SELECT number, pin, balance FROM card WHERE number=?',
+            (card_number,)
+        )
+        return self.__map_fetched_data(fetched)
+
     def find_by_card_and_pin(self, card_number: str, pin: str) -> typing.Optional[Card]:
         fetched = self.__fetchone(
             'SELECT number, pin, balance FROM card WHERE number=? AND pin=?',
             (card_number, pin,)
         )
-        card = None
-        if fetched:
-            number, pin, balance = fetched
-            card = Card(number, pin, balance)
-        return card
+        return self.__map_fetched_data(fetched)
 
     def close_account(self, card: Card) -> None:
         self.__execute(
@@ -160,13 +169,21 @@ class BankCardDbStorage(BankCardStorageInterface):
             (card.get_card_number(),)
         )
 
-    def fetch_all(self):
+    def fetch_all(self) -> list:
         fetchall = self.__fetchall('SELECT * FROM card')
         return fetchall
 
     def fetch_all_numbers(self) -> frozenset:
         fetched = self.__fetchall('SELECT number FROM card')
         return frozenset(n[0] for n in fetched)
+
+    @staticmethod
+    def __map_fetched_data(fetched: typing.Optional[tuple]) -> typing.Optional[Card]:
+        card = None
+        if fetched:
+            number, pin, balance = fetched
+            card = Card(number, pin, balance)
+        return card
 
     def __generate_unique_card_number(self) -> str:
         card_number = None
@@ -228,6 +245,9 @@ class Bank:
     def create_card(self) -> Card:
         return self.__storage.create_card()
 
+    def find_by_card_number(self, card_number: str) -> Card:
+        return self.__storage.find_by_card_and_pin(card_number, pin)
+
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         return self.__storage.find_by_card_and_pin(card_number, pin)
 
@@ -267,6 +287,19 @@ class ActionPersonalCabinet:
         value = int(input('Enter income:'))
         self.__card.change_balance(value)
         print('Income was added!')
+
+    def do_transfer(self) -> None:
+        '''
+        Do transfer item allows transferring money to another account. We handle the following errors:
+
+        If the user tries to transfer more money than he/she has, output: "Not enough money!"
+        If the user tries to transfer money to the same account, output the following message: “You can't transfer money to the same account!”
+        If the receiver's card number doesn’t pass the Luhn algorithm, you should output: “Probably you made a mistake in the card number. Please try again!”
+        If the receiver's card number doesn’t exist, you should output: “Such a card does not exist.”
+        If there is no error, ask the user how much money they want to transfer and make the transaction.
+
+        :return:
+        '''
 
     def close_account(self) -> None:
         self.__bank.close_account(self.__card)
