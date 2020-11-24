@@ -19,6 +19,13 @@ class LuhnAlgorithm:
         rest_of_divider = sum_digits % 10
         return 10 - rest_of_divider if rest_of_divider else 0
 
+    @staticmethod
+    def check_is_correct_number(number_str: str) -> bool:
+        is_correct = False
+        if number_str:
+            is_correct = int(number_str[-1]) == LuhnAlgorithm.generate_check_sum(number_str[:-1])
+        return is_correct
+
 
 class CardGenerator:
 
@@ -246,7 +253,7 @@ class Bank:
         return self.__storage.create_card()
 
     def find_by_card_number(self, card_number: str) -> Card:
-        return self.__storage.find_by_card_and_pin(card_number, pin)
+        return self.__storage.find_by_card_number(card_number)
 
     def find_by_card_and_pin(self, card_number: str, pin: str) -> Card:
         return self.__storage.find_by_card_and_pin(card_number, pin)
@@ -300,6 +307,8 @@ class ActionPersonalCabinet:
 
         :return:
         '''
+        print('Transfer')
+        card_number = input('Enter card number:')
 
     def close_account(self) -> None:
         self.__bank.close_account(self.__card)
